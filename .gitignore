@@ -1,0 +1,11 @@
+# created by virtualenv automatically
+#.venv/Lib
+#Firebase Service Account Key
+
+#DO NOT UPLOAD THIS FILE !!
+
+serviceAccountKey.json
+
+#Python Virtual Environment
+
+.venv/
