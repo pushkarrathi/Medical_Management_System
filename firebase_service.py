@@ -1,6 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 import os
+from datetime import datetime
 
 # --- Firebase Initialization ---
 # Get the app_id from the global environment (if it exists)
@@ -37,6 +38,20 @@ def get_collection_ref(collection_name):
     return db.collection('artifacts').document(app_id).collection('public').document('data').collection(collection_name)
 
 
+# --- Helper function to calculate age ---
+def _calculate_age(dob_string):
+    """Calculates age from a YYYY-MM-DD date string."""
+    if not dob_string:
+        return ''
+    try:
+        dob = datetime.strptime(dob_string, "%Y-%m-%d")
+        today = datetime.today()
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        return age
+    except ValueError:
+        return ''  # Return empty if date is invalid
+
+
 # --- PATIENTS ---
 def get_patients():
     docs = get_collection_ref('patients').stream()
@@ -44,35 +59,37 @@ def get_patients():
     for doc in docs:
         patient_data = doc.to_dict()
         patient_data['id'] = doc.id
+        # MODIFIED: Calculate age from DOB
+        patient_data['age'] = _calculate_age(patient_data.get('dob'))
         patients.append(patient_data)
     # Sort by name by default
     patients.sort(key=lambda x: x.get('name', '').lower())
     return patients
 
 
-def add_patient(name, contact, history, age, gender):
+def add_patient(name, contact, history, dob, gender):
     """
-    MODIFIED: Added age and gender fields.
+    MODIFIED: Now accepts dob instead of age.
     """
     doc_ref = get_collection_ref('patients').add({
         'name': name,
         'contact': contact,
         'history': history,
-        'age': age,
+        'dob': dob,  # Stored DOB
         'gender': gender
     })
     return doc_ref[1].id  # Return the new document ID
 
 
-def update_patient(pid, name, contact, history, age, gender):
+def update_patient(pid, name, contact, history, dob, gender):
     """
-    MODIFIED: Added age and gender fields.
+    MODIFIED: Now accepts dob instead of age.
     """
     get_collection_ref('patients').document(pid).update({
         'name': name,
         'contact': contact,
         'history': history,
-        'age': age,
+        'dob': dob,  # Stored DOB
         'gender': gender
     })
 

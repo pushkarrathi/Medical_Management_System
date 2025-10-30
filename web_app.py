@@ -34,12 +34,12 @@ def get_patients():
 def add_patient():
     data = request.json
     try:
-        # MODIFIED: Added age and gender
+        # MODIFIED: Changed 'age' to 'dob'
         doc_id = firebase_service.add_patient(
             data.get('name'),
             data.get('contact'),
             data.get('history'),
-            data.get('age'),
+            data.get('dob'), # Changed from age
             data.get('gender')
         )
         return jsonify({"success": True, "id": doc_id}), 201
@@ -51,13 +51,13 @@ def add_patient():
 def update_patient(pid):
     data = request.json
     try:
-        # MODIFIED: Added age and gender
+        # MODIFIED: Changed 'age' to 'dob'
         firebase_service.update_patient(
             pid,
             data.get('name'),
             data.get('contact'),
             data.get('history'),
-            data.get('age'),
+            data.get('dob'), # Changed from age
             data.get('gender')
         )
         return jsonify({"success": True, "id": pid})
