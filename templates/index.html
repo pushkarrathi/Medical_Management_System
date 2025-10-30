@@ -24,12 +24,19 @@
                     { id: 'inventory', name: 'Inventory', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>' }
                 ],
 
-                // Data properties are now top-level
+                // --- Data properties ---
                 patients: [],
                 doctors: [],
                 appointments: [],
                 billing: [],
                 inventory: [],
+
+                // --- NEW: Search text properties ---
+                searchPatient: '',
+                searchDoctor: '',
+                searchAppointment: '',
+                searchBilling: '',
+                searchInventory: '',
 
                 modal: {
                     open: false,
@@ -41,12 +48,48 @@
 
                 // Schemas for clearing the form
                 schemas: {
-                    // MODIFIED: Changed 'age' to 'dob' (default to today's date for date picker)
                     patients: { id: null, name: '', contact: '', history: '', dob: new Date().toISOString().split('T')[0], gender: 'M' },
                     doctors: { id: null, name: '', specialty: '', schedule: '' },
                     appointments: { id: null, patient: '', doctor: '', datetime: new Date().toISOString().slice(0, 16) },
                     billing: { id: null, patient: '', amount: 0.0, status: 'Pending' },
                     inventory: { id: null, item: '', quantity: 0, supplier: '' }
+                },
+
+                // --- NEW: Computed properties for filtered lists ---
+                get filteredPatients() {
+                    if (this.searchPatient === '') return this.patients;
+                    return this.patients.filter(p =>
+                        p.name.toLowerCase().includes(this.searchPatient.toLowerCase()) ||
+                        p.contact.toLowerCase().includes(this.searchPatient.toLowerCase())
+                    );
+                },
+                get filteredDoctors() {
+                    if (this.searchDoctor === '') return this.doctors;
+                    return this.doctors.filter(d =>
+                        d.name.toLowerCase().includes(this.searchDoctor.toLowerCase()) ||
+                        d.specialty.toLowerCase().includes(this.searchDoctor.toLowerCase())
+                    );
+                },
+                get filteredAppointments() {
+                    if (this.searchAppointment === '') return this.appointments;
+                    return this.appointments.filter(a =>
+                        a.patient.toLowerCase().includes(this.searchAppointment.toLowerCase()) ||
+                        a.doctor.toLowerCase().includes(this.searchAppointment.toLowerCase())
+                    );
+                },
+                get filteredBilling() {
+                    if (this.searchBilling === '') return this.billing;
+                    return this.billing.filter(b =>
+                        b.patient.toLowerCase().includes(this.searchBilling.toLowerCase()) ||
+                        b.status.toLowerCase().includes(this.searchBilling.toLowerCase())
+                    );
+                },
+                get filteredInventory() {
+                    if (this.searchInventory === '') return this.inventory;
+                    return this.inventory.filter(i =>
+                        i.item.toLowerCase().includes(this.searchInventory.toLowerCase()) ||
+                        i.supplier.toLowerCase().includes(this.searchInventory.toLowerCase())
+                    );
                 },
 
                 // Load all data from our Flask API
@@ -57,7 +100,7 @@
 
                 async fetchAllData() {
                     try {
-                        const cacheBust = `?_=${new Date().getTime()}`; // Cache-busting query parameter
+                        const cacheBust = `?_=${new Date().getTime()}`;
                         const [patientsRes, doctorsRes, appointmentsRes, billingRes, inventoryRes] = await Promise.all([
                             fetch(`/api/patients${cacheBust}`),
                             fetch(`/api/doctors${cacheBust}`),
@@ -81,12 +124,12 @@
                 // Fetch data for a specific tab
                 async fetchData(type) {
                     try {
-                        const cacheBust = `?_=${new Date().getTime()}`; // Cache-busting query parameter
+                        const cacheBust = `?_=${new Date().getTime()}`;
                         const response = await fetch(`/api/${type}${cacheBust}`);
                         if (!response.ok) throw new Error(`Server error: ${response.status}`);
                         const newData = await response.json();
 
-                        this[type] = newData; // Directly update the top-level property
+                        this[type] = newData;
 
                     } catch (error) {
                         console.error(`Error fetching ${type}:`, error);
@@ -100,24 +143,21 @@
                         // Edit mode
                         this.modal.isEdit = true;
                         this.modal.title = `Edit ${type.slice(0, -1)}`;
-                        // Clone item data to form, ensuring schema defaults
                         this.form = { ...this.schemas[type], ...item };
 
                         if(type === 'appointments' && this.form.datetime) {
                             try {
                                 const dt = new Date(this.form.datetime);
-                                // Format to 'YYYY-MM-DDTHH:MM'
                                 this.form.datetime = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
                             } catch(e) {
                                 console.error("Error formatting datetime:", e);
-                                this.form.datetime = new Date().toISOString().slice(0, 16); // fallback
+                                this.form.datetime = new Date().toISOString().slice(0, 16);
                             }
                         }
                     } else {
                         // Add mode
                         this.modal.isEdit = false;
                         this.modal.title = `Add ${type.slice(0, -1)}`;
-                        // Use schema to reset form
                         this.form = { ...this.schemas[type] };
                     }
                     this.modal.open = true;
@@ -138,7 +178,6 @@
 
                         if (!response.ok) throw new Error('Server responded with an error');
 
-                        // Refresh data for the current tab and close modal
                         await this.fetchData(type);
                         this.modal.open = false;
 
@@ -165,7 +204,7 @@
                     }
                 },
 
-                // MODIFIED: Helper function to calculate age from DOB string
+                // Helper function to calculate age from DOB string
                 calculateAge(dobString) {
                     if (!dobString) return 'N/A';
                     try {
@@ -192,7 +231,7 @@
                             timeStyle: 'short'
                         });
                     } catch(e) {
-                        return isoString; // fallback
+                        return isoString;
                     }
                 }
             }
@@ -200,13 +239,8 @@
     </script>
 
     <style>
-        /* Simple transition for modal */
-        .modal-enter-active, .modal-leave-active {
-            transition: opacity 0.2s ease;
-        }
-        .modal-enter-from, .modal-leave-to {
-            opacity: 0;
-        }
+        .modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
+        .modal-enter-from, .modal-leave-to { opacity: 0; }
         [x-cloak] { display: none !important; }
     </style>
 </head>
@@ -243,13 +277,16 @@
                 <!-- Patients Tab -->
                 <div x-show="currentTab === 'patients'">
                     <h2 class="text-2xl font-semibold text-gray-800 mb-6">Patient Management</h2>
-                    <button @click="openModal('patients')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Patient</button>
+                    <div class="flex justify-between items-center mb-4">
+                        <button @click="openModal('patients')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Patient</button>
+                        <!-- NEW: Search bar for patients -->
+                        <input type="text" x-model="searchPatient" placeholder="Search patients..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
                     <div class="bg-white shadow rounded-lg overflow-hidden">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                    <!-- MODIFIED: Changed column header from DOB to Age -->
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
@@ -258,10 +295,10 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <template x-for="patient in patients" :key="patient.id">
+                                <!-- MODIFIED: Loop over filteredPatients -->
+                                <template x-for="patient in filteredPatients" :key="patient.id">
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="patient.name"></td>
-                                        <!-- MODIFIED: Calculate and display age from patient.dob -->
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="calculateAge(patient.dob)"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="patient.gender"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="patient.contact"></td>
@@ -280,7 +317,11 @@
                 <!-- Doctors Tab -->
                 <div x-show="currentTab === 'doctors'">
                     <h2 class="text-2xl font-semibold text-gray-800 mb-6">Doctor Management</h2>
-                    <button @click="openModal('doctors')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Doctor</button>
+                    <div class="flex justify-between items-center mb-4">
+                        <button @click="openModal('doctors')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Doctor</button>
+                        <!-- NEW: Search bar for doctors -->
+                        <input type="text" x-model="searchDoctor" placeholder="Search doctors..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
                     <div class="bg-white shadow rounded-lg overflow-hidden">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -292,7 +333,8 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <template x-for="doctor in doctors" :key="doctor.id">
+                                <!-- MODIFIED: Loop over filteredDoctors -->
+                                <template x-for="doctor in filteredDoctors" :key="doctor.id">
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="doctor.name"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="doctor.specialty"></td>
@@ -311,7 +353,11 @@
                 <!-- Appointments Tab -->
                 <div x-show="currentTab === 'appointments'">
                     <h2 class="text-2xl font-semibold text-gray-800 mb-6">Appointment Management</h2>
-                    <button @click="openModal('appointments')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Schedule Appointment</button>
+                    <div class="flex justify-between items-center mb-4">
+                        <button @click="openModal('appointments')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Schedule Appointment</button>
+                        <!-- NEW: Search bar for appointments -->
+                        <input type="text" x-model="searchAppointment" placeholder="Search appointments..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
                     <div class="bg-white shadow rounded-lg overflow-hidden">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -323,7 +369,8 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <template x-for="appt in appointments" :key="appt.id">
+                                <!-- MODIFIED: Loop over filteredAppointments -->
+                                <template x-for="appt in filteredAppointments" :key="appt.id">
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="appt.patient"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="appt.doctor"></td>
@@ -342,7 +389,11 @@
                 <!-- Billing Tab -->
                 <div x-show="currentTab === 'billing'">
                     <h2 class="text-2xl font-semibold text-gray-800 mb-6">Billing Management</h2>
-                    <button @click="openModal('billing')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Bill</button>
+                    <div class="flex justify-between items-center mb-4">
+                        <button @click="openModal('billing')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Bill</button>
+                        <!-- NEW: Search bar for billing -->
+                        <input type="text" x-model="searchBilling" placeholder="Search bills..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
                     <div class="bg-white shadow rounded-lg overflow-hidden">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -354,7 +405,8 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <template x-for="bill in billing" :key="bill.id">
+                                <!-- MODIFIED: Loop over filteredBilling -->
+                                <template x-for="bill in filteredBilling" :key="bill.id">
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="bill.patient"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="bill.amount ? `$${Number(bill.amount).toFixed(2)}` : '$0.00'"></td>
@@ -377,7 +429,11 @@
                 <!-- Inventory Tab -->
                 <div x-show="currentTab === 'inventory'">
                     <h2 class="text-2xl font-semibold text-gray-800 mb-6">Inventory Management</h2>
-                    <button @click="openModal('inventory')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Item</button>
+                    <div class="flex justify-between items-center mb-4">
+                        <button @click="openModal('inventory')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Item</button>
+                        <!-- NEW: Search bar for inventory -->
+                        <input type="text" x-model="searchInventory" placeholder="Search inventory..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
                     <div class="bg-white shadow rounded-lg overflow-hidden">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -389,7 +445,8 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <template x-for="item in inventory" :key="item.id">
+                                <!-- MODIFIED: Loop over filteredInventory -->
+                                <template x-for="item in filteredInventory" :key="item.id">
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="item.item"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="item.quantity"></td>
@@ -450,7 +507,6 @@
                                         <label class="block text-sm font-medium text-gray-700">Name</label>
                                         <input type="text" x-model="form.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
-                                    <!-- MODIFIED: Changed Age to Date of Birth (dob) -->
                                     <div class="grid grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700">Date of Birth</label>
