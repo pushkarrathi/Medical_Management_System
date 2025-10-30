@@ -1,10 +1,557 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Management System</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Load Alpine.js -->
+    <!-- 'defer' ensures it runs after the page is parsed -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <script>
+        function medicalApp() {
+            return {
+                loading: true,
+                currentTab: 'patients',
+                tabs: [
+                    { id: 'patients', name: 'Patients', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>' },
+                    { id: 'doctors', name: 'Doctors', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9a3 3 0 00-3-3h-1.5a3 3 0 100 6H15a3 3 0 003-3zM9 9a3 3 0 00-3-3H4.5a3 3 0 100 6H6a3 3 0 003-3zM12 15a3 3 0 00-3-3H7.5a3 3 0 100 6H9a3 3 0 003-3z"></path></svg>' },
+                    { id: 'appointments', name: 'Appointments', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>' },
+                    { id: 'billing', name: 'Billing', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>' },
+                    { id: 'inventory', name: 'Inventory', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>' }
+                ],
+
+                // Data properties are now top-level
+                patients: [],
+                doctors: [],
+                appointments: [],
+                billing: [],
+                inventory: [],
+
+                modal: {
+                    open: false,
+                    type: '',
+                    title: '',
+                    isEdit: false
+                },
+                form: {},
+
+                // Schemas for clearing the form
+                schemas: {
+                    // MODIFIED: Added age (default '') and gender (default 'M')
+                    patients: { id: null, name: '', contact: '', history: '', age: '', gender: 'M' },
+                    doctors: { id: null, name: '', specialty: '', schedule: '' },
+                    appointments: { id: null, patient: '', doctor: '', datetime: new Date().toISOString().slice(0, 16) },
+                    billing: { id: null, patient: '', amount: 0.0, status: 'Pending' },
+                    inventory: { id: null, item: '', quantity: 0, supplier: '' }
+                },
+
+                // Load all data from our Flask API
+                async init() {
+                    await this.fetchAllData();
+                    this.loading = false;
+                },
+
+                async fetchAllData() {
+                    try {
+                        const cacheBust = `?_=${new Date().getTime()}`; // Cache-busting query parameter
+                        const [patientsRes, doctorsRes, appointmentsRes, billingRes, inventoryRes] = await Promise.all([
+                            fetch(`/api/patients${cacheBust}`),
+                            fetch(`/api/doctors${cacheBust}`),
+                            fetch(`/api/appointments${cacheBust}`),
+                            fetch(`/api/billing${cacheBust}`),
+                            fetch(`/api/inventory${cacheBust}`)
+                        ]);
+
+                        this.patients = await patientsRes.json();
+                        this.doctors = await doctorsRes.json();
+                        this.appointments = await appointmentsRes.json();
+                        this.billing = await billingRes.json();
+                        this.inventory = await inventoryRes.json();
+
+                    } catch (error) {
+                        console.error("Error fetching data:", error);
+                        alert("Could not load data from the server.");
+                    }
+                },
+
+                // Fetch data for a specific tab
+                async fetchData(type) {
+                    try {
+                        const cacheBust = `?_=${new Date().getTime()}`; // Cache-busting query parameter
+                        const response = await fetch(`/api/${type}${cacheBust}`);
+                        if (!response.ok) throw new Error(`Server error: ${response.status}`);
+                        const newData = await response.json();
+
+                        this[type] = newData; // Directly update the top-level property
+
+                    } catch (error) {
+                        console.error(`Error fetching ${type}:`, error);
+                    }
+                },
+
+                // Open the add/edit modal
+                openModal(type, item = null) {
+                    this.modal.type = type;
+                    if (item) {
+                        // Edit mode
+                        this.modal.isEdit = true;
+                        this.modal.title = `Edit ${type.slice(0, -1)}`;
+                        // Clone item data to form, ensuring schema defaults
+                        this.form = { ...this.schemas[type], ...item };
+
+                        if(type === 'appointments' && this.form.datetime) {
+                            try {
+                                const dt = new Date(this.form.datetime);
+                                // Format to 'YYYY-MM-DDTHH:MM'
+                                this.form.datetime = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                            } catch(e) {
+                                console.error("Error formatting datetime:", e);
+                                this.form.datetime = new Date().toISOString().slice(0, 16); // fallback
+                            }
+                        }
+                    } else {
+                        // Add mode
+                        this.modal.isEdit = false;
+                        this.modal.title = `Add ${type.slice(0, -1)}`;
+                        // Use schema to reset form
+                        this.form = { ...this.schemas[type] };
+                    }
+                    this.modal.open = true;
+                },
+
+                // Handle form submission (Add or Edit)
+                async submitForm() {
+                    const type = this.modal.type;
+                    const url = this.modal.isEdit ? `/api/${type}/${this.form.id}` : `/api/${type}`;
+                    const method = this.modal.isEdit ? 'PUT' : 'POST';
+
+                    try {
+                        const response = await fetch(url, {
+                            method: method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.form)
+                        });
+
+                        if (!response.ok) throw new Error('Server responded with an error');
+
+                        // Refresh data for the current tab and close modal
+                        await this.fetchData(type);
+                        this.modal.open = false;
+
+                    } catch (error) {
+                        console.error("Error submitting form:", error);
+                        alert(`Could not save ${this.modal.type}. Please try again.`);
+                    }
+                },
+
+                // Delete an item
+                async deleteItem(type, id) {
+                    if (!confirm(`Are you sure you want to delete this ${type.slice(0, -1)}?`)) return;
+
+                    try {
+                        const response = await fetch(`/api/${type}/${id}`, {
+                            method: 'DELETE'
+                        });
+                        if (!response.ok) throw new Error('Server responded with an error');
+
+                        await this.fetchData(type);
+                    } catch (error) {
+                        console.error("Error deleting item:", error);
+                        alert(`Could not delete ${this.modal.type}. Please try again.`);
+                    }
+                },
+
+                // Helper to format date
+                formatDateTime(isoString) {
+                    if (!isoString) return 'N/A';
+                    try {
+                        const date = new Date(isoString);
+                        return date.toLocaleString('en-US', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                        });
+                    } catch(e) {
+                        return isoString; // fallback
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Simple transition for modal */
+        .modal-enter-active, .modal-leave-active {
+            transition: opacity 0.2s ease;
+        }
+        .modal-enter-from, .modal-leave-to {
+            opacity: 0;
+        }
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
-<body>
-$END$
+<body class="bg-gray-100 font-sans antialiased" x-data="medicalApp()" x-init="init()">
+
+    <!-- Main Container -->
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white shadow-lg flex flex-col">
+            <div class="p-6 border-b border-gray-200">
+                <h1 class="text-xl font-bold text-blue-700">Medical System</h1>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <template x-for="tab in tabs" :key="tab.id">
+                    <button @click="currentTab = tab.id"
+                            :class="currentTab === tab.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'"
+                            class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-200">
+                        <span x-html="tab.icon"></span>
+                        <span x-text="tab.name"></span>
+                    </button>
+                </template>
+            </nav>
+        </div>
+
+        <!-- Content Area -->
+        <main class="flex-1 p-8 overflow-y-auto">
+            <!-- Loading Spinner -->
+            <div x-show="loading" class="flex justify-center items-center h-full">
+                <div class="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+            </div>
+
+            <!-- Main Content (Tabs) -->
+            <div x-show="!loading" x-cloak>
+                <!-- Patients Tab -->
+                <div x-show="currentTab === 'patients'">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Patient Management</h2>
+                    <button @click="openModal('patients')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Patient</button>
+                    <div class="bg-white shadow rounded-lg overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <!-- MODIFIED: Added Age and Gender columns -->
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">History</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <template x-for="patient in patients" :key="patient.id">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="patient.name"></td>
+                                        <!-- MODIFIED: Added Age and Gender data cells -->
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="patient.age"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="patient.gender"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="patient.contact"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-500 truncate max-w-sm" x-text="patient.history"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            <button @click="openModal('patients', patient)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                            <button @click="deleteItem('patients', patient.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Doctors Tab -->
+                <div x-show="currentTab === 'doctors'">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Doctor Management</h2>
+                    <button @click="openModal('doctors')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Doctor</button>
+                    <div class="bg-white shadow rounded-lg overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Specialty</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <template x-for="doctor in doctors" :key="doctor.id">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="doctor.name"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="doctor.specialty"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="doctor.schedule"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            <button @click="openModal('doctors', doctor)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                            <button @click="deleteItem('doctors', doctor.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Appointments Tab -->
+                <div x-show="currentTab === 'appointments'">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Appointment Management</h2>
+                    <button @click="openModal('appointments')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Schedule Appointment</button>
+                    <div class="bg-white shadow rounded-lg overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <template x-for="appt in appointments" :key="appt.id">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="appt.patient"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="appt.doctor"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="formatDateTime(appt.datetime)"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            <button @click="openModal('appointments', appt)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                            <button @click="deleteItem('appointments', appt.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Billing Tab -->
+                <div x-show="currentTab === 'billing'">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Billing Management</h2>
+                    <button @click="openModal('billing')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Bill</button>
+                    <div class="bg-white shadow rounded-lg overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <template x-for="bill in billing" :key="bill.id">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="bill.patient"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="bill.amount ? `$${Number(bill.amount).toFixed(2)}` : '$0.00'"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                                                  :class="{ 'bg-green-100 text-green-800': bill.status === 'Paid', 'bg-yellow-100 text-yellow-800': bill.status === 'Pending', 'bg-red-100 text-red-800': bill.status === 'Overdue' }"
+                                                  x-text="bill.status"></span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            <button @click="openModal('billing', bill)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                            <button @click="deleteItem('billing', bill.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Inventory Tab -->
+                <div x-show="currentTab === 'inventory'">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Inventory Management</h2>
+                    <button @click="openModal('inventory')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Item</button>
+                    <div class="bg-white shadow rounded-lg overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <template x-for="item in inventory" :key="item.id">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="item.item"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="item.quantity"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="item.supplier"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            <button @click="openModal('inventory', item)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                            <button @click="deleteItem('inventory', item.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div x-show="modal.open"
+         class="fixed inset-0 z-10 overflow-y-auto"
+         x-transition:enter="modal-enter-active"
+         x-transition:leave="modal-leave-active"
+         x-cloak>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Background overlay -->
+            <div x-show="modal.open"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 transition-opacity"
+                 @click="modal.open = false">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <!-- Modal panel -->
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen"></span>&#8203;
+            <div x-show="modal.open"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+
+                <form @submit.prevent="submitForm()">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" x-text="modal.title"></h3>
+                        <div class="mt-4 space-y-4">
+                            <!-- Patient Fields -->
+                            <template x-if="modal.type === 'patients'">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Name</label>
+                                        <input type="text" x-model="form.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                    </div>
+                                    <!-- MODIFIED: Added Age and Gender fields to the form -->
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Age</label>
+                                            <input type="number" x-model.number="form.age" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Gender</label>
+                                            <select x-model="form.gender" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                                <option value="M">Male</option>
+                                                <option value="F">Female</option>
+                                                <option value="O">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Contact</label>
+                                        <input type="text" x-model="form.contact" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Medical History</label>
+                                        <textarea x-model="form.history" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Doctor Fields -->
+                            <template x-if="modal.type === 'doctors'">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Name</label>
+                                        <input type="text" x-model="form.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Specialty</label>
+                                        <input type="text" x-model="form.specialty" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Schedule</label>
+                                        <input type="text" x-model="form.schedule" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Appointment Fields -->
+                            <template x-if="modal.type === 'appointments'">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Patient Name</label>
+                                        <input type="text" x-model="form.patient" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Doctor Name</label>
+                                        <input type="text" x-model="form.doctor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Date & Time</label>
+                                        <input type="datetime-local" x-model="form.datetime" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Billing Fields -->
+                            <template x-if="modal.type === 'billing'">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Patient Name</label>
+                                        <input type="text" x-model="form.patient" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Amount</label>
+                                        <input type="number" step="0.01" x-model.number="form.amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Status</label>
+                                        <select x-model="form.status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                            <option>Pending</option>
+                                            <option>Paid</option>
+                                            <option>Overdue</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Inventory Fields -->
+                            <template x-if="modal.type === 'inventory'">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Item Name</label>
+                                        <input type="text" x-model="form.item" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Quantity</label>
+                                        <input type="number" x-model.number="form.quantity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Supplier</label>
+                                        <input type="text" x-model="form.supplier" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    </div>
+                                </div>
+                            </template>
+
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="submit"
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                x-text="modal.isEdit ? 'Update' : 'Save'"></button>
+                        <button type="button"
+                                @click="modal.open = false"
+                                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
+

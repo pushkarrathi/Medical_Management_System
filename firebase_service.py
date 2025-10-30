@@ -1,19 +1,30 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
+import os
 
 # --- Firebase Initialization ---
-cred = credentials.Certificate('serviceAccountKey.json')
-firebase_app = firebase_admin.initialize_app(cred)
-db = firestore.client()
-
-# --- Platform-Specific Variables ---
 # Get the app_id from the global environment (if it exists)
 app_id = 'default-app-id'
+if os.environ.get('APP_ID'):
+    app_id = os.environ.get('APP_ID')
+
 try:
-    if '__app_id' in globals():
-        app_id = globals()['__app_id']
-except NameError:
-    pass  # Keep default-app-id
+    # Check if the app is already initialized
+    firebase_admin.get_app()
+except ValueError:
+    # App not initialized, so initialize it
+    cred_path = 'serviceAccountKey.json'
+    if not os.path.exists(cred_path):
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("!!! ERROR: serviceAccountKey.json not found.           !!!")
+        print("!!! Please download it from your Firebase project      !!!")
+        print("!!! settings and place it in the root directory.       !!!")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    else:
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+
+db = firestore.client()
 
 
 # --- Helper function to get the correct, sandboxed collection path ---
@@ -34,23 +45,35 @@ def get_patients():
         patient_data = doc.to_dict()
         patient_data['id'] = doc.id
         patients.append(patient_data)
+    # Sort by name by default
+    patients.sort(key=lambda x: x.get('name', '').lower())
     return patients
 
 
-def add_patient(name, contact, history):
+def add_patient(name, contact, history, age, gender):
+    """
+    MODIFIED: Added age and gender fields.
+    """
     doc_ref = get_collection_ref('patients').add({
         'name': name,
         'contact': contact,
-        'history': history
+        'history': history,
+        'age': age,
+        'gender': gender
     })
     return doc_ref[1].id  # Return the new document ID
 
 
-def update_patient(pid, name, contact, history):
+def update_patient(pid, name, contact, history, age, gender):
+    """
+    MODIFIED: Added age and gender fields.
+    """
     get_collection_ref('patients').document(pid).update({
         'name': name,
         'contact': contact,
-        'history': history
+        'history': history,
+        'age': age,
+        'gender': gender
     })
 
 
@@ -66,6 +89,7 @@ def get_doctors():
         doc_data = doc.to_dict()
         doc_data['id'] = doc.id
         doctors.append(doc_data)
+    doctors.sort(key=lambda x: x.get('name', '').lower())
     return doctors
 
 
@@ -98,6 +122,7 @@ def get_appointments():
         doc_data = doc.to_dict()
         doc_data['id'] = doc.id
         appointments.append(doc_data)
+    appointments.sort(key=lambda x: x.get('datetime', ''))
     return appointments
 
 
@@ -130,6 +155,7 @@ def get_bills():
         doc_data = doc.to_dict()
         doc_data['id'] = doc.id
         bills.append(doc_data)
+    bills.sort(key=lambda x: x.get('patient', '').lower())
     return bills
 
 
@@ -137,7 +163,7 @@ def add_bill(patient, amount, status):
     # Ensure amount is stored as a number, not a string
     try:
         numeric_amount = float(amount)
-    except ValueError:
+    except (ValueError, TypeError):
         numeric_amount = 0.0
 
     doc_ref = get_collection_ref('billing').add({
@@ -151,7 +177,7 @@ def add_bill(patient, amount, status):
 def update_bill(bid, patient, amount, status):
     try:
         numeric_amount = float(amount)
-    except ValueError:
+    except (ValueError, TypeError):
         numeric_amount = 0.0
 
     get_collection_ref('billing').document(bid).update({
@@ -173,13 +199,14 @@ def get_inventory():
         doc_data = doc.to_dict()
         doc_data['id'] = doc.id
         inventory.append(doc_data)
+    inventory.sort(key=lambda x: x.get('item', '').lower())
     return inventory
 
 
 def add_inventory(item, quantity, supplier):
     try:
         numeric_quantity = int(quantity)
-    except ValueError:
+    except (ValueError, TypeError):
         numeric_quantity = 0
 
     doc_ref = get_collection_ref('inventory').add({
@@ -193,7 +220,7 @@ def add_inventory(item, quantity, supplier):
 def update_inventory(iid, item, quantity, supplier):
     try:
         numeric_quantity = int(quantity)
-    except ValueError:
+    except (ValueError, TypeError):
         numeric_quantity = 0
 
     get_collection_ref('inventory').document(iid).update({
@@ -205,5 +232,4 @@ def update_inventory(iid, item, quantity, supplier):
 
 def delete_inventory(iid):
     get_collection_ref('inventory').document(iid).delete()
-
 
