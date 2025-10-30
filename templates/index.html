@@ -15,10 +15,8 @@
         function medicalApp() {
             return {
                 loading: true,
-                // MODIFIED: Default tab is now 'dashboard'
                 currentTab: 'dashboard',
                 tabs: [
-                    // NEW: Dashboard Tab
                     { id: 'dashboard', name: 'Dashboard', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6-4a1 1 0 001-1v-1a1 1 0 10-2 0v1a1 1 0 001 1zm5-1a1 1 0 001-1v-1a1 1 0 10-2 0v1a1 1 0 001 1z"></path></svg>' },
                     { id: 'patients', name: 'Patients', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>' },
                     { id: 'doctors', name: 'Doctors', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9a3 3 0 00-3-3h-1.5a3 3 0 100 6H15a3 3 0 003-3zM9 9a3 3 0 00-3-3H4.5a3 3 0 100 6H6a3 3 0 003-3zM12 15a3 3 0 00-3-3H7.5a3 3 0 100 6H9a3 3 0 003-3z"></path></svg>' },
@@ -53,7 +51,8 @@
                 schemas: {
                     patients: { id: null, name: '', contact: '', history: '', dob: new Date().toISOString().split('T')[0], gender: 'M' },
                     doctors: { id: null, name: '', specialty: '', schedule: '' },
-                    appointments: { id: null, patient: '', doctor: '', datetime: new Date().toISOString().slice(0, 16) },
+                    // MODIFIED: patient and doctor are now null, as they will hold IDs
+                    appointments: { id: null, patient: null, doctor: null, datetime: new Date().toISOString().slice(0, 16) },
                     billing: { id: null, patient: '', amount: 0.0, status: 'Pending' },
                     inventory: { id: null, item: '', quantity: 0, supplier: '' }
                 },
@@ -75,10 +74,13 @@
                 },
                 get filteredAppointments() {
                     if (this.searchAppointment === '') return this.appointments;
-                    return this.appointments.filter(a =>
-                        a.patient.toLowerCase().includes(this.searchAppointment.toLowerCase()) ||
-                        a.doctor.toLowerCase().includes(this.searchAppointment.toLowerCase())
-                    );
+                    return this.appointments.filter(a => {
+                        // MODIFIED: Search based on the looked-up name, not the ID
+                        const patientName = this.getPatientName(a.patient).toLowerCase();
+                        const doctorName = this.getDoctorName(a.doctor).toLowerCase();
+                        const search = this.searchAppointment.toLowerCase();
+                        return patientName.includes(search) || doctorName.includes(search);
+                    });
                 },
                 get filteredBilling() {
                     if (this.searchBilling === '') return this.billing;
@@ -95,7 +97,7 @@
                     );
                 },
 
-                // --- NEW: Computed properties for Dashboard ---
+                // --- Computed properties for Dashboard ---
                 get todaysAppointments() {
                     const today = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD' format
                     return this.appointments
@@ -106,7 +108,8 @@
                     return this.billing.filter(b => b.status === 'Pending').length;
                 },
                 get lowStockItems() {
-                    return this.inventory.filter(i => i.quantity < 10); // Set threshold to 10
+                    // Ensure quantity is a number before comparing
+                    return this.inventory.filter(i => Number(i.quantity) < 10);
                 },
 
                 // Load all data from our Flask API
@@ -165,7 +168,13 @@
                         if(type === 'appointments' && this.form.datetime) {
                             try {
                                 const dt = new Date(this.form.datetime);
-                                this.form.datetime = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                                // Format to 'YYYY-MM-DDTHH:MM'
+                                const year = dt.getFullYear();
+                                const month = (dt.getMonth() + 1).toString().padStart(2, '0');
+                                const day = dt.getDate().toString().padStart(2, '0');
+                                const hours = dt.getHours().toString().padStart(2, '0');
+                                const minutes = dt.getMinutes().toString().padStart(2, '0');
+                                this.form.datetime = `${year}-${month}-${day}T${hours}:${minutes}`;
                             } catch(e) {
                                 console.error("Error formatting datetime:", e);
                                 this.form.datetime = new Date().toISOString().slice(0, 16);
@@ -176,6 +185,12 @@
                         this.modal.isEdit = false;
                         this.modal.title = `Add ${type.slice(0, -1)}`;
                         this.form = { ...this.schemas[type] };
+
+                        // NEW: Set default patient/doctor for new appointments
+                        if (type === 'appointments') {
+                            this.form.patient = this.patients.length > 0 ? this.patients[0].id : null;
+                            this.form.doctor = this.doctors.length > 0 ? this.doctors[0].id : null;
+                        }
                     }
                     this.modal.open = true;
                 },
@@ -251,6 +266,16 @@
                     } catch(e) {
                         return isoString;
                     }
+                },
+
+                // --- NEW: Helper functions to get names from IDs ---
+                getPatientName(id) {
+                    const patient = this.patients.find(p => p.id === id);
+                    return patient ? patient.name : 'Unknown Patient';
+                },
+                getDoctorName(id) {
+                    const doctor = this.doctors.find(d => d.id === id);
+                    return doctor ? doctor.name : 'Unknown Doctor';
                 }
             }
         }
@@ -292,7 +317,7 @@
 
             <!-- Main Content (Tabs) -->
             <div x-show="!loading" x-cloak>
-                <!-- NEW: Dashboard Tab -->
+                <!-- Dashboard Tab -->
                 <div x-show="currentTab === 'dashboard'">
                     <h2 class="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -304,11 +329,12 @@
                                 <p class="text-gray-500">No appointments scheduled for today.</p>
                             </template>
                             <ul class="divide-y divide-gray-200">
+                                <!-- MODIFIED: Use helper functions to get names -->
                                 <template x-for="appt in todaysAppointments" :key="appt.id">
                                     <li class="py-3 flex justify-between items-center">
                                         <div>
-                                            <p class="text-sm font-medium text-blue-600" x-text="appt.patient"></p>
-                                            <p class="text-sm text-gray-500" x-text="`with ${appt.doctor}`"></p>
+                                            <p class="text-sm font-medium text-blue-600" x-text="getPatientName(appt.patient)"></p>
+                                            <p class="text-sm text-gray-500" x-text="`with ${getDoctorName(appt.doctor)}`"></p>
                                         </div>
                                         <span class="text-sm font-semibold text-gray-700" x-text="formatDateTime(appt.datetime, false)"></span>
                                     </li>
@@ -431,7 +457,7 @@
                     <h2 class="text-2xl font-semibold text-gray-800 mb-6">Appointment Management</h2>
                     <div class="flex justify-between items-center mb-4">
                         <button @click="openModal('appointments')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Schedule Appointment</button>
-                        <input type="text" x-model="searchAppointment" placeholder="Search appointments..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" x-model="searchAppointment" placeholder="Search by patient or doctor..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div class="bg-white shadow rounded-lg overflow-hidden">
                         <table class="min-w-full divide-y divide-gray-200">
@@ -444,10 +470,11 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
+                                <!-- MODIFIED: Use helper functions to get names -->
                                 <template x-for="appt in filteredAppointments" :key="appt.id">
                                     <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="appt.patient"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="appt.doctor"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="getPatientName(appt.patient)"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="getDoctorName(appt.doctor)"></td>
                                         <td class="px-6 py-4 text-sm text-gray-500" x-text="formatDateTime(appt.datetime)"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                             <button @click="openModal('appointments', appt)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
@@ -519,7 +546,7 @@
                                 <template x-for="item in filteredInventory" :key="item.id">
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="item.item"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="item.quantity"></td>
+                                        <td classD="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="item.quantity"></td>
                                         <td class="px-6 py-4 text-sm text-gray-500" x-text="item.supplier"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                             <button @click="openModal('inventory', item)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
@@ -620,16 +647,28 @@
                                 </div>
                             </template>
 
-                            <!-- Appointment Fields -->
+                            <!-- Appointment Fields: MODIFIED -->
                             <template x-if="modal.type === 'appointments'">
                                 <div class="space-y-4">
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700">Patient Name</label>
-                                        <input type="text" x-model="form.patient" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                        <label class="block text-sm font-medium text-gray-700">Patient</label>
+                                        <!-- Changed from input to select, loops over patients -->
+                                        <select x-model="form.patient" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                            <option value="" disabled>Select a patient</option>
+                                            <template x-for="p in patients" :key="p.id">
+                                                <option :value="p.id" x-text="p.name"></option>
+                                            </template>
+                                        </select>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700">Doctor Name</label>
-                                        <input type="text" x-model="form.doctor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        <label class="block text-sm font-medium text-gray-700">Doctor</label>
+                                        <!-- Changed from input to select, loops over doctors -->
+                                        <select x-model="form.doctor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                            <option value="" disabled>Select a doctor</option>
+                                            <template x-for="d in doctors" :key="d.id">
+                                                <option :value="d.id" x-text="`${d.name} (${d.specialty})`"></option>
+                                            </template>
+                                        </select>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Date & Time</label>
