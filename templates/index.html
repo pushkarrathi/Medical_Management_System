@@ -72,16 +72,12 @@
 
                 // Schemas for clearing the form
                 schemas: {
-                    // MODIFIED: dob is now a date string, gender has a default
                     patients: { id: null, name: '', contact: '', history: '', dob: '', gender: 'M' },
-                    // MODIFIED: default specialty
                     doctors: { id: null, name: '', specialty: 'General Physician', schedule: '', fee: 100 },
-                    // MODIFIED: default patient/doctor ID to null
-                    appointments: { id: null, patient: null, doctor: null, datetime: new Date().toISOString().slice(0, 16) },
-                    // MODIFIED: patient is an ID, items is an array
-                    billing: { id: null, patient: null, items: [], total: 0, status: 'Pending' },
-                    // MODIFIED: Added price
-                    inventory: { id: null, item: '', quantity: 0, supplier: '', price: 0.0 }
+                    // --- FIX: Set default patient/doctor to '' instead of null for 'required' validation ---
+                    appointments: { id: null, patient: '', doctor: '', datetime: new Date().toISOString().slice(0, 16) },
+                    billing: { id: null, patient: '', items: [], total: 0, status: 'Pending' },
+                    inventory: { id:null, item: '', quantity: 0, supplier: '', price: 0.0 }
                 },
 
                 // Load all data from our Flask API
@@ -92,6 +88,7 @@
 
                 async fetchAllData() {
                     try {
+                        // Add cache-busting query parameter
                         const cacheBust = `?_=${new Date().getTime()}`;
                         const [patients, doctors, appointments, billing, inventory] = await Promise.all([
                             fetch(`/api/patients${cacheBust}`).then(res => res.json()),
@@ -135,8 +132,8 @@
                     const search = this.searchPatient.toLowerCase();
                     return this.patients.filter(p =>
                         p.name.toLowerCase().includes(search) ||
-                        p.contact.toLowerCase().includes(search) ||
-                        p.gender.toLowerCase() === search
+                        (p.contact && p.contact.toLowerCase().includes(search)) ||
+                        (p.gender && p.gender.toLowerCase() === search)
                     );
                 },
                 get filteredDoctors() {
@@ -177,7 +174,7 @@
                     const search = this.searchInventory.toLowerCase();
                     return this.inventory.filter(i =>
                         i.item.toLowerCase().includes(search) ||
-                        i.supplier.toLowerCase().includes(search)
+                        (i.supplier && i.supplier.toLowerCase().includes(search))
                     );
                 },
 
@@ -223,6 +220,7 @@
                         // Ensure 'items' array is fresh for new bill
                         if (type === 'billing') {
                             this.form.items = [];
+                            this.form.patient = ''; // FIX: set default patient to ''
                         } else if (type === 'appointments') {
                             this.appointmentSpecialty = 'All'; // Reset specialty filter
                         }
@@ -363,14 +361,18 @@
                         const response = await fetch(`/api/billing/pay/${billId}`, {
                             method: 'POST'
                         });
-                        if (!response.ok) throw new Error('Server responded with an error');
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Server responded with an error');
+                        }
 
                         // Refresh both billing and inventory data
                         await this.fetchData('billing');
                         await this.fetchData('inventory');
                     } catch (error) {
                         console.error("Error marking bill as paid:", error);
-                        alert("Could not process payment.");
+                        alert(`Could not process payment: ${error.message}`);
                     }
                 },
 
@@ -433,14 +435,14 @@
                 getPatientName(id) {
                     if (!id) return 'Unknown Patient';
                     const patient = this.patients.find(p => p.id === id);
-                    return patient ? patient.name : `Patient ID (${id.slice(0,5)}...)`;
+                    return patient ? patient.name : `Patient ID (${id ? id.slice(0,5) : ''}...)`;
                 },
 
                 // Helper to get doctor name from ID
                 getDoctorName(id) {
                     if (!id) return 'Unknown Doctor';
                     const doctor = this.doctors.find(d => d.id === id);
-                    return doctor ? doctor.name : `Doctor ID (${id.slice(0,5)}...)`;
+                    return doctor ? doctor.name : `Doctor ID (${id ? id.slice(0,5) : ''}...)`;
                 },
                 // --- NEW: Helper to get a doctor's specialty from their ID ---
                 getDoctorSpecialty(id) {
@@ -502,7 +504,7 @@
                         <!-- Today's Appointments -->
                         <div class="bg-white shadow rounded-lg p-6">
                             <h3 class="text-lg font-medium text-gray-700 mb-4">Today's Appointments</h3>
-                            <div class="space-y-3">
+                            <div class="space-y-3 max-h-60 overflow-y-auto">
                                 <template x-if="todaysAppointments.length === 0">
                                     <p class="text-sm text-gray-500">No appointments scheduled for today.</p>
                                 </template>
@@ -533,7 +535,7 @@
                         <!-- Low Stock Items -->
                         <div class="bg-white shadow rounded-lg p-6">
                             <h3 class="text-lg font-medium text-gray-700 mb-4">Low Stock Warning</h3>
-                            <div class="space-y-3">
+                            <div class="space-y-3 max-h-60 overflow-y-auto">
                                 <template x-if="lowStockItems.length === 0">
                                     <p class="text-sm text-gray-500">Inventory levels look good.</p>
                                 </template>
@@ -617,7 +619,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="doctor.name"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="doctor.specialty"></td>
                                         <!-- MODIFIED: Show Fee -->
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="`₹${doctor.fee.toFixed(2)}`"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="doctor.fee ? `₹${doctor.fee.toFixed(2)}` : '₹0.00'"></td>
                                         <td class="px-6 py-4 text-sm text-gray-500" x-text="doctor.schedule"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                             <button @click="openModal('doctors', doctor)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
@@ -853,8 +855,9 @@
                                     <!-- MODIFIED: Dropdown for Patient -->
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Patient</label>
+                                        <!-- FIX: value="" on disabled option, default form.patient to '' -->
                                         <select x-model="form.patient" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
-                                            <option :value="null" disabled>Select a patient</option>
+                                            <option value="" disabled>Select a patient</option>
                                             <template x-for="p in patients" :key="p.id">
                                                 <option :value="p.id" x-text="p.name"></option>
                                             </template>
@@ -863,7 +866,7 @@
                                     <!-- --- NEW: Specialty Filter Dropdown --- -->
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Filter by Specialty</label>
-                                        <select x-model="appointmentSpecialty" @change="form.doctor = null" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        <select x-model="appointmentSpecialty" @change="form.doctor = ''" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                                             <option value="All">All Specialties</option>
                                             <template x-for="spec in doctorSpecialties" :key="spec">
                                                 <option :value="spec" x-text="spec"></option>
@@ -873,8 +876,9 @@
                                     <!-- --- MODIFIED: Doctor dropdown now filters based on specialty --- -->
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Doctor</label>
+                                        <!-- FIX: value="" on disabled option, default form.doctor to '' -->
                                         <select x-model="form.doctor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required :disabled="filteredDoctorsForAppointment.length === 0">
-                                            <option :value="null" disabled>Select a doctor</option>
+                                            <option value="" disabled>Select a doctor</option>
                                             <template x-for="d in filteredDoctorsForAppointment" :key="d.id">
                                                 <option :value="d.id" x-text="`${d.name} (${d.specialty})`"></option>
                                             </template>
@@ -893,8 +897,9 @@
                                     <!-- Patient Dropdown -->
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Patient</label>
+                                        <!-- FIX: value="" on disabled option, default form.patient to '' -->
                                         <select x-model="form.patient" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
-                                            <option :value="null" disabled>Select a patient</option>
+                                            <option value="" disabled>Select a patient</option>
                                             <template x-for="p in patients" :key="p.id">
                                                 <option :value="p.id" x-text="p.name"></option>
                                             </template>
@@ -957,7 +962,7 @@
                                         <input type="number" step="0.01" min="0" x-model.number="form.price" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700">Quantity</C>
+                                        <label class="block text-sm font-medium text-gray-700">Quantity</Vlabel>
                                         <input type="number" step="1" min="0" x-model.number="form.quantity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
                                     <div>
