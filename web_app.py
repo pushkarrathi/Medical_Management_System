@@ -1,16 +1,13 @@
 import firebase_service
 from flask import Flask, render_template, request, jsonify, abort
 import os
-import json
-
-# --- Flask App Initialization ---
 
 # Get the absolute path of the directory where this script (web_app.py) is
 basedir = os.path.abspath(os.path.dirname(__file__))
 # Create the absolute path to the 'templates' folder
 template_dir = os.path.join(basedir, 'templates')
 
-# Initialize Flask app, telling it the absolute path
+# Initialize Flask app, telling it the absolute path to the templates folder
 app = Flask(__name__, template_folder=template_dir)
 
 # --- HTML Page ---
@@ -35,16 +32,20 @@ def get_patients():
 @app.route('/api/patients', methods=['POST'])
 def add_patient():
     data = request.json
+    if not data or not data.get('name'):
+        abort(400, description="Missing patient name")
     try:
-        # Updated to handle DOB and Gender
+        # Get all fields from the form
         doc_id = firebase_service.add_patient(
-            data.get('name'),
-            data.get('contact'),
-            data.get('history'),
-            data.get('dob'), # Changed from age
-            data.get('gender')
+            name=data.get('name'),
+            contact=data.get('contact'),
+            history=data.get('history'),
+            dob=data.get('dob'), # Added DOB
+            gender=data.get('gender') # Added Gender
         )
-        return jsonify({"success": True, "id": doc_id}), 201
+        # Return the newly created patient object
+        new_patient = firebase_service.get_patient(doc_id)
+        return jsonify(new_patient), 201
     except Exception as e:
         print(f"Error adding patient: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
@@ -52,17 +53,20 @@ def add_patient():
 @app.route('/api/patients/<string:pid>', methods=['PUT'])
 def update_patient(pid):
     data = request.json
+    if not data:
+        abort(400, description="Missing data")
     try:
-        # Updated to handle DOB and Gender
+        # Update with all fields
         firebase_service.update_patient(
             pid,
-            data.get('name'),
-            data.get('contact'),
-            data.get('history'),
-            data.get('dob'), # Changed from age
-            data.get('gender')
+            name=data.get('name'),
+            contact=data.get('contact'),
+            history=data.get('history'),
+            dob=data.get('dob'), # Added DOB
+            gender=data.get('gender') # Added Gender
         )
-        return jsonify({"success": True, "id": pid})
+        updated_patient = firebase_service.get_patient(pid)
+        return jsonify(updated_patient)
     except Exception as e:
         print(f"Error updating patient: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
@@ -89,9 +93,17 @@ def get_doctors():
 @app.route('/api/doctors', methods=['POST'])
 def add_doctor():
     data = request.json
+    if not data or not data.get('name'):
+        abort(400, description="Missing doctor name")
     try:
-        doc_id = firebase_service.add_doctor(data.get('name'), data.get('specialty'), data.get('schedule'))
-        return jsonify({"success": True, "id": doc_id}), 201
+        doc_id = firebase_service.add_doctor(
+            name=data.get('name'),
+            specialty=data.get('specialty'),
+            schedule=data.get('schedule'),
+            fee=data.get('fee') # Added Fee
+        )
+        new_doctor = firebase_service.get_doctor(doc_id)
+        return jsonify(new_doctor), 201
     except Exception as e:
         print(f"Error adding doctor: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
@@ -99,9 +111,18 @@ def add_doctor():
 @app.route('/api/doctors/<string:did>', methods=['PUT'])
 def update_doctor(did):
     data = request.json
+    if not data:
+        abort(400, description="Missing data")
     try:
-        firebase_service.update_doctor(did, data.get('name'), data.get('specialty'), data.get('schedule'))
-        return jsonify({"success": True, "id": did})
+        firebase_service.update_doctor(
+            did,
+            name=data.get('name'),
+            specialty=data.get('specialty'),
+            schedule=data.get('schedule'),
+            fee=data.get('fee') # Added Fee
+        )
+        updated_doctor = firebase_service.get_doctor(did)
+        return jsonify(updated_doctor)
     except Exception as e:
         print(f"Error updating doctor: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
@@ -128,10 +149,16 @@ def get_appointments():
 @app.route('/api/appointments', methods=['POST'])
 def add_appointment():
     data = request.json
+    if not data or not data.get('patient') or not data.get('doctor'):
+        abort(400, description="Missing patient or doctor ID")
     try:
-        # Now storing patient/doctor IDs
-        doc_id = firebase_service.add_appointment(data.get('patient'), data.get('doctor'), data.get('datetime'))
-        return jsonify({"success": True, "id": doc_id}), 201
+        doc_id = firebase_service.add_appointment(
+            patient=data.get('patient'), # Now sends Patient ID
+            doctor=data.get('doctor'),   # Now sends Doctor ID
+            datetime=data.get('datetime')
+        )
+        new_appt = firebase_service.get_appointment(doc_id)
+        return jsonify(new_appt), 201
     except Exception as e:
         print(f"Error adding appointment: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
@@ -139,10 +166,17 @@ def add_appointment():
 @app.route('/api/appointments/<string:aid>', methods=['PUT'])
 def update_appointment(aid):
     data = request.json
+    if not data:
+        abort(400, description="Missing data")
     try:
-        # Now storing patient/doctor IDs
-        firebase_service.update_appointment(aid, data.get('patient'), data.get('doctor'), data.get('datetime'))
-        return jsonify({"success": True, "id": aid})
+        firebase_service.update_appointment(
+            aid,
+            patient=data.get('patient'), # Now sends Patient ID
+            doctor=data.get('doctor'),   # Now sends Doctor ID
+            datetime=data.get('datetime')
+        )
+        updated_appt = firebase_service.get_appointment(aid)
+        return jsonify(updated_appt)
     except Exception as e:
         print(f"Error updating appointment: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
@@ -156,28 +190,30 @@ def delete_appointment(aid):
         print(f"Error deleting appointment: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
 
-# --- BILLING API (Updated for Feature #4) ---
+# --- BILLING API ---
 @app.route('/api/billing', methods=['GET'])
 def get_billing():
     try:
         bills = firebase_service.get_billing()
         return jsonify(bills)
     except Exception as e:
-        print(f"Error getting bills: {e}")
+        print(f"Error getting billing: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/billing', methods=['POST'])
 def add_bill():
     data = request.json
+    if not data or not data.get('patient'):
+        abort(400, description="Missing patient ID")
     try:
-        # Updated to handle items list and total
         doc_id = firebase_service.add_bill(
-            data.get('patient'),
-            data.get('items', []),
-            data.get('total', 0),
-            data.get('status', 'Pending')
+            patient=data.get('patient'), # Patient ID
+            items=data.get('items', []), # List of items
+            total=data.get('total', 0),  # Calculated total
+            status=data.get('status', 'Pending')
         )
-        return jsonify({"success": True, "id": doc_id}), 201
+        new_bill = firebase_service.get_bill(doc_id)
+        return jsonify(new_bill), 201
     except Exception as e:
         print(f"Error adding bill: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
@@ -185,16 +221,18 @@ def add_bill():
 @app.route('/api/billing/<string:bid>', methods=['PUT'])
 def update_bill(bid):
     data = request.json
+    if not data:
+        abort(400, description="Missing data")
     try:
-        # Updated to handle items list and total
         firebase_service.update_bill(
             bid,
-            data.get('patient'),
-            data.get('items', []),
-            data.get('total', 0),
-            data.get('status', 'Pending')
+            patient=data.get('patient'),
+            items=data.get('items', []),
+            total=data.get('total', 0),
+            status=data.get('status', 'Pending')
         )
-        return jsonify({"success": True, "id": bid})
+        updated_bill = firebase_service.get_bill(bid)
+        return jsonify(updated_bill)
     except Exception as e:
         print(f"Error updating bill: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
@@ -208,73 +246,73 @@ def delete_bill(bid):
         print(f"Error deleting bill: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
 
-# --- NEW API Endpoint for Feature #4 ---
+# --- NEW: Route for processing payment ---
 @app.route('/api/billing/pay/<string:bid>', methods=['POST'])
 def pay_bill(bid):
-    """
-    Handles marking a bill as 'Paid' and updating inventory stock.
-    This is a transactional operation defined in firebase_service.
-    """
     try:
-        result = firebase_service.process_payment(bid)
-        if result.get("success"):
-            return jsonify(result)
-        else:
-            # If the transaction failed, return a 400 error
-            return jsonify(result), 400
+        # This function handles marking as 'Paid' AND updating inventory
+        firebase_service.process_payment(bid)
+        return jsonify({"success": True, "id": bid})
     except Exception as e:
-        print(f"Error processing payment for bill {bid}: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        print(f"Error processing payment: {e}")
+        # Check for our custom ValueError
+        if "Bill not found or no items to process" in str(e) or "Not enough stock" in str(e):
+             return jsonify({"success": False, "error": str(e)}), 400
+        return jsonify({"success": False, "error": "An internal error occurred"}), 500
 
-# --- INVENTORY API (Updated for Feature #4) ---
+# --- INVENTORY API ---
 @app.route('/api/inventory', methods=['GET'])
 def get_inventory():
     try:
-        items = firebase_service.get_inventory()
-        return jsonify(items)
+        inventory = firebase_service.get_inventory()
+        return jsonify(inventory)
     except Exception as e:
         print(f"Error getting inventory: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/inventory', methods=['POST'])
-def add_inventory_item():
+def add_inventory():
     data = request.json
+    if not data or not data.get('item'):
+        abort(400, description="Missing item name")
     try:
-        # Added 'price' field
         doc_id = firebase_service.add_inventory(
-            data.get('item'),
-            data.get('quantity'),
-            data.get('supplier'),
-            data.get('price', 0.0) # Add price
+            item=data.get('item'),
+            quantity=data.get('quantity', 0),
+            supplier=data.get('supplier'),
+            price=data.get('price', 0.0) # Added Price
         )
-        return jsonify({"success": True, "id": doc_id}), 201
+        new_item = firebase_service.get_inventory_item(doc_id)
+        return jsonify(new_item), 201
     except Exception as e:
-        print(f"Error adding inventory item: {e}")
+        print(f"Error adding inventory: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
 
 @app.route('/api/inventory/<string:iid>', methods=['PUT'])
-def update_inventory_item(iid):
+def update_inventory(iid):
     data = request.json
+    if not data:
+        abort(400, description="Missing data")
     try:
-        # Added 'price' field
         firebase_service.update_inventory(
             iid,
-            data.get('item'),
-            data.get('quantity'),
-            data.get('supplier'),
-            data.get('price', 0.0) # Add price
+            item=data.get('item'),
+            quantity=data.get('quantity', 0),
+            supplier=data.get('supplier'),
+            price=data.get('price', 0.0) # Added Price
         )
-        return jsonify({"success": True, "id": iid})
+        updated_item = firebase_service.get_inventory_item(iid)
+        return jsonify(updated_item)
     except Exception as e:
-        print(f"Error updating inventory item: {e}")
+        print(f"Error updating inventory: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
 
 @app.route('/api/inventory/<string:iid>', methods=['DELETE'])
-def delete_inventory_item(iid):
+def delete_inventory(iid):
     try:
         firebase_service.delete_inventory(iid)
         return jsonify({"success": True, "id": iid})
     except Exception as e:
-        print(f"Error deleting inventory item: {e}")
+        print(f"Error deleting inventory: {e}")
         return jsonify({"success": False, "error": str(e)}), 400
 

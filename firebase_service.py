@@ -1,63 +1,58 @@
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
-import json
 import os
+import json  # Make sure json is imported
 
 # --- Firebase Initialization ---
+# This block of code handles connecting to your Firebase project.
 
-# Define the required path for the sandboxed environment
-# We hardcode this ID to ensure the app uses the same database path
-# whether it's run locally or on the platform.
-app_id = "default-app-id"
+# Get the path to the service account key.
+# This assumes 'serviceAccountKey.json' is in the same directory as this script.
+basedir = os.path.abspath(os.path.dirname(__file__))
+key_path = os.path.join(basedir, 'serviceAccountKey.json')
 
-# Construct the required base path for all database operations
-BASE_PATH = f"artifacts/{app_id}/public/data"
-
-# Initialize Firebase
+# Get the platform-specific credentials.
+# The __firebase_config_str is automatically provided by the platform.
+# We fall back to our local 'serviceAccountKey.json' if it's not found.
 try:
-    # 1. Try to load the service account key file
-    cred = credentials.Certificate('serviceAccountKey.json')
-    firebase_admin.initialize_app(cred)
-    print("Firebase initialized with serviceAccountKey.json")
+    # Try to load the platform's environment credentials
+    firebase_config_str = os.environ['__firebase_config']
+    firebase_config = json.loads(firebase_config_str)
+    cred = credentials.Certificate(firebase_config)
+    app_id = os.environ.get('__app_id', 'default-app-id')
+except (KeyError, json.JSONDecodeError):
+    # Fallback for local development
+    if os.path.exists(key_path):
+        cred = credentials.Certificate(key_path)
+    else:
+        # If no key is found, use anonymous auth (limited capabilities)
+        cred = None
+        print("Warning: 'serviceAccountKey.json' not found. Using anonymous auth.")
 
-except Exception as e1:
-    try:
-        # 2. If file fails, try to use environment variables (for the platform)
-        firebase_config_str = os.environ.get('__firebase_config')
-        firebase_config = json.loads(firebase_config_str)
+    # --- THIS IS THE FIX ---
+    # We hardcode the app_id to 'default-app-id' so your local app
+    # and deployed app use the SAME database path.
+    app_id = "default-app-id"
 
-        # Get the auth token
-        custom_token = os.environ.get('__initial_auth_token')
+# Initialize the Firebase Admin SDK
+if not firebase_admin._apps:
+    if cred:
+        firebase_admin.initialize_app(cred)
+    else:
+        # Initialize without credentials for anonymous/emulator access
+        firebase_admin.initialize_app()
 
-        # Initialize the app without credentials for client-side auth
-        firebase_admin.initialize_app(firebase_config)
-
-        # Authenticate using the custom token
-        auth_client = auth.Client(firebase_admin.get_app())
-        # Note: This auth is for verifying tokens. The 'db' client will be
-        # authenticated by the platform's environment.
-        print(f"Firebase initialized with environment config. Auth client ready.")
-
-    except Exception as e2:
-        print(f"CRITICAL: Failed to initialize Firebase. App will not work.")
-        print(f"Service Account Key Error: {e1}")
-        print(f"Environment Variable Error: {e2}")
-
-# Get the Firestore client
 db = firestore.client()
 
-# --- Collection References ---
-# All database paths are now prefixed with the required BASE_PATH
-patient_ref = db.collection(f"{BASE_PATH}/patients")
-doctor_ref = db.collection(f"{BASE_PATH}/doctors")
-appointment_ref = db.collection(f"{BASE_PATH}/appointments")
-billing_ref = db.collection(f"{BASE_PATH}/billing")
-inventory_ref = db.collection(f"{BASE_PATH}/inventory")
+# --- MODIFIED: Set the base path for all database operations ---
+# This ensures all data is stored in the correct sandboxed path
+BASE_COLLECTION = f"artifacts/{app_id}/public/data"
 
 
-# --- Helper Function ---
-def _doc_to_dict(doc):
-    """Converts a Firestore document to a dictionary, adding the ID."""
+# --- Helper Functions ---
+
+def _get_doc_data(doc):
+    """Helper to format a Firestore document into a Python dict."""
     if not doc.exists:
         return None
     data = doc.to_dict()
@@ -66,209 +61,285 @@ def _doc_to_dict(doc):
 
 
 # --- PATIENTS ---
+
 def get_patients():
-    docs = patient_ref.stream()
-    return [_doc_to_dict(doc) for doc in docs]
+    """Fetches all patients from the 'patients' collection."""
+    patients_ref = db.collection(f"{BASE_COLLECTION}/patients")
+    docs = patients_ref.stream()
+    return [_get_doc_data(doc) for doc in docs]
+
+
+def get_patient(pid):
+    """Gets a single patient by their ID."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/patients").document(pid)
+    return _get_doc_data(doc_ref.get())
 
 
 def add_patient(name, contact, history, dob, gender):
+    """Adds a new patient."""
+    patients_ref = db.collection(f"{BASE_COLLECTION}/patients")
     data = {
         'name': name,
         'contact': contact,
         'history': history,
-        'dob': dob,
-        'gender': gender
+        'dob': dob,  # Added DOB
+        'gender': gender  # Added Gender
     }
-    _, doc_ref = patient_ref.add(data)
+    # Add a new doc with a generated ID
+    update_time, doc_ref = patients_ref.add(data)
     return doc_ref.id
 
 
 def update_patient(pid, name, contact, history, dob, gender):
+    """Updates an existing patient by ID."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/patients").document(pid)
     data = {
         'name': name,
         'contact': contact,
         'history': history,
-        'dob': dob,
-        'gender': gender
+        'dob': dob,  # Added DOB
+        'gender': gender  # Added Gender
     }
-    patient_ref.document(pid).set(data, merge=True)
+    doc_ref.update(data)
 
 
 def delete_patient(pid):
-    patient_ref.document(pid).delete()
+    """Deletes a patient by ID."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/patients").document(pid)
+    doc_ref.delete()
 
 
 # --- DOCTORS ---
+
 def get_doctors():
-    docs = doctor_ref.stream()
-    return [_doc_to_dict(doc) for doc in docs]
+    """Fetches all doctors."""
+    docs_ref = db.collection(f"{BASE_COLLECTION}/doctors")
+    docs = docs_ref.stream()
+    return [_get_doc_data(doc) for doc in docs]
 
 
-def add_doctor(name, specialty, schedule):
-    data = {'name': name, 'specialty': specialty, 'schedule': schedule}
-    _, doc_ref = doctor_ref.add(data)
+def get_doctor(did):
+    """Gets a single doctor by ID."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/doctors").document(did)
+    return _get_doc_data(doc_ref.get())
+
+
+def add_doctor(name, specialty, schedule, fee):
+    """Adds a new doctor."""
+    docs_ref = db.collection(f"{BASE_COLLECTION}/doctors")
+    data = {
+        'name': name,
+        'specialty': specialty,
+        'schedule': schedule,
+        'fee': fee  # Added consultation fee
+    }
+    update_time, doc_ref = docs_ref.add(data)
     return doc_ref.id
 
 
-def update_doctor(did, name, specialty, schedule):
-    data = {'name': name, 'specialty': specialty, 'schedule': schedule}
-    doctor_ref.document(did).set(data, merge=True)
+def update_doctor(did, name, specialty, schedule, fee):
+    """Updates an existing doctor."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/doctors").document(did)
+    data = {
+        'name': name,
+        'specialty': specialty,
+        'schedule': schedule,
+        'fee': fee  # Added consultation fee
+    }
+    doc_ref.update(data)
 
 
 def delete_doctor(did):
-    doctor_ref.document(did).delete()
+    """Deletes a doctor by ID."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/doctors").document(did)
+    doc_ref.delete()
 
 
 # --- APPOINTMENTS ---
+
 def get_appointments():
-    docs = appointment_ref.stream()
-    return [_doc_to_dict(doc) for doc in docs]
+    """Fetches all appointments."""
+    appts_ref = db.collection(f"{BASE_COLLECTION}/appointments")
+    docs = appts_ref.stream()
+    return [_get_doc_data(doc) for doc in docs]
 
 
-def add_appointment(patient_id, doctor_id, datetime):
-    data = {'patient': patient_id, 'doctor': doctor_id, 'datetime': datetime}
-    _, doc_ref = appointment_ref.add(data)
+def get_appointment(aid):
+    """Gets a single appointment by ID."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/appointments").document(aid)
+    return _get_doc_data(doc_ref.get())
+
+
+def add_appointment(patient, doctor, datetime):
+    """Adds a new appointment."""
+    appts_ref = db.collection(f"{BASE_COLLECTION}/appointments")
+    data = {
+        'patient': patient,  # This is now a Patient ID
+        'doctor': doctor,  # This is now a Doctor ID
+        'datetime': datetime
+    }
+    update_time, doc_ref = appts_ref.add(data)
     return doc_ref.id
 
 
-def update_appointment(aid, patient_id, doctor_id, datetime):
-    data = {'patient': patient_id, 'doctor': doctor_id, 'datetime': datetime}
-    appointment_ref.document(aid).set(data, merge=True)
+def update_appointment(aid, patient, doctor, datetime):
+    """Updates an existing appointment."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/appointments").document(aid)
+    data = {
+        'patient': patient,
+        'doctor': doctor,
+        'datetime': datetime
+    }
+    doc_ref.update(data)
 
 
 def delete_appointment(aid):
-    appointment_ref.document(aid).delete()
+    """Deletes an appointment."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/appointments").document(aid)
+    doc_ref.delete()
 
 
-# --- BILLING (Updated for Feature #4) ---
+# --- BILLING ---
+
 def get_billing():
-    docs = billing_ref.stream()
-    return [_doc_to_dict(doc) for doc in docs]
+    """Fetches all bills."""
+    bills_ref = db.collection(f"{BASE_COLLECTION}/billing")
+    docs = bills_ref.stream()
+    return [_get_doc_data(doc) for doc in docs]
 
 
-def add_bill(patient_id, items, total, status):
+def get_bill(bid):
+    """Gets a single bill by ID."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/billing").document(bid)
+    return _get_doc_data(doc_ref.get())
+
+
+def add_bill(patient, items, total, status):
+    """Adds a new bill."""
+    bills_ref = db.collection(f"{BASE_COLLECTION}/billing")
     data = {
-        'patient': patient_id,
+        'patient': patient,  # Patient ID
         'items': items,  # List of item objects
-        'total': total,
+        'total': total,  # Calculated total
         'status': status
     }
-    _, doc_ref = billing_ref.add(data)
+    update_time, doc_ref = bills_ref.add(data)
     return doc_ref.id
 
 
-def update_bill(bid, patient_id, items, total, status):
+def update_bill(bid, patient, items, total, status):
+    """Updates an existing bill."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/billing").document(bid)
     data = {
-        'patient': patient_id,
+        'patient': patient,
         'items': items,
         'total': total,
         'status': status
     }
-    billing_ref.document(bid).set(data, merge=True)
+    doc_ref.update(data)
 
 
 def delete_bill(bid):
-    billing_ref.document(bid).delete()
+    """Deletes a bill."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/billing").document(bid)
+    doc_ref.delete()
 
 
-# --- INVENTORY (Updated for Feature #4) ---
+# --- NEW: Process Payment and Update Inventory ---
+@firestore.transactional
+def process_payment_transaction(transaction, bill_ref, inventory_ref, bill):
+    """
+    This is a transactional function to ensure data integrity.
+    It runs "all or nothing":
+    1. Updates the bill status to "Paid".
+    2. Updates the stock for each item on the bill.
+    If any part fails (e.g., not enough stock), the whole operation fails.
+    """
+    # 1. Update the bill's status
+    transaction.update(bill_ref, {'status': 'Paid'})
+
+    # 2. Update inventory stock
+    for item in bill.get('items', []):
+        item_id = item.get('id')
+        quantity_billed = item.get('quantity')
+
+        # 'consult_fee' is a special item and not in the inventory
+        if not item_id or item_id == 'consult_fee':
+            continue
+
+        item_ref = inventory_ref.document(item_id)
+        item_snapshot = item_ref.get(transaction=transaction)
+
+        if not item_snapshot.exists:
+            raise ValueError(f"Inventory item not found: {item.get('name')}")
+
+        current_quantity = item_snapshot.to_dict().get('quantity', 0)
+
+        if current_quantity < quantity_billed:
+            raise ValueError(f"Not enough stock for {item.get('name')}. Only {current_quantity} available.")
+
+        # Subtract the quantity
+        new_quantity = current_quantity - quantity_billed
+        transaction.update(item_ref, {'quantity': new_quantity})
+
+
+def process_payment(bid):
+    """Public-facing function to start the payment transaction."""
+    bill_ref = db.collection(f"{BASE_COLLECTION}/billing").document(bid)
+    inventory_ref = db.collection(f"{BASE_COLLECTION}/inventory")
+
+    bill = _get_doc_data(bill_ref.get())
+
+    if not bill or not bill.get('items'):
+        raise ValueError("Bill not found or no items to process.")
+
+    # Run the transaction
+    transaction = db.transaction()
+    process_payment_transaction(transaction, bill_ref, inventory_ref, bill)
+
+
+# --- INVENTORY ---
+
 def get_inventory():
-    docs = inventory_ref.stream()
-    return [_doc_to_dict(doc) for doc in docs]
+    """Fetches all inventory items."""
+    inv_ref = db.collection(f"{BASE_COLLECTION}/inventory")
+    docs = inv_ref.stream()
+    return [_get_doc_data(doc) for doc in docs]
+
+
+def get_inventory_item(iid):
+    """Gets a single inventory item by ID."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/inventory").document(iid)
+    return _get_doc_data(doc_ref.get())
 
 
 def add_inventory(item, quantity, supplier, price):
+    """Adds a new item to inventory."""
+    inv_ref = db.collection(f"{BASE_COLLECTION}/inventory")
     data = {
         'item': item,
         'quantity': int(quantity),
         'supplier': supplier,
-        'price': float(price)
+        'price': float(price)  # Added Price
     }
-    _, doc_ref = inventory_ref.add(data)
+    update_time, doc_ref = inv_ref.add(data)
     return doc_ref.id
 
 
 def update_inventory(iid, item, quantity, supplier, price):
+    """Updates an existing inventory item."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/inventory").document(iid)
     data = {
         'item': item,
         'quantity': int(quantity),
         'supplier': supplier,
-        'price': float(price)
+        'price': float(price)  # Added Price
     }
-    inventory_ref.document(iid).set(data, merge=True)
+    doc_ref.update(data)
 
 
 def delete_inventory(iid):
-    inventory_ref.document(iid).delete()
-
-
-# --- Transactional Logic for Feature #4 ---
-
-@firestore.transactional
-def _process_payment_transaction(transaction, bill_doc_ref):
-    """
-    This function runs as an atomic transaction.
-    It reads the bill, updates inventory, and marks the bill as paid.
-    """
-    # 1. Get the bill document
-    bill_snapshot = bill_doc_ref.get(transaction=transaction)
-    if not bill_snapshot.exists:
-        raise Exception("Bill not found.")
-
-    bill_data = bill_snapshot.to_dict()
-
-    if bill_data.get('status') == 'Paid':
-        raise Exception("This bill has already been paid.")
-
-    # 2. Loop through items on the bill and update inventory
-    items_on_bill = bill_data.get('items', [])
-    if not items_on_bill:
-        raise Exception("This bill has no items to process.")
-
-    for item in items_on_bill:
-        item_id = item.get('id')
-        quantity_to_deduct = int(item.get('quantity'))
-
-        if not item_id:
-            continue  # Skip items with no ID
-
-        item_doc_ref = inventory_ref.document(item_id)
-        item_snapshot = item_doc_ref.get(transaction=transaction)
-
-        if not item_snapshot.exists:
-            raise Exception(f"Inventory item '{item.get('name')}' not found.")
-
-        current_quantity = int(item_snapshot.to_dict().get('quantity', 0))
-
-        if current_quantity < quantity_to_deduct:
-            raise Exception(f"Not enough stock for '{item.get('name')}'. "
-                            f"Need: {quantity_to_deduct}, Have: {current_quantity}")
-
-        # Update the inventory item's quantity
-        new_quantity = current_quantity - quantity_to_deduct
-        transaction.update(item_doc_ref, {
-            'quantity': new_quantity
-        })
-
-    # 3. If all inventory updates succeed, mark the bill as 'Paid'
-    transaction.update(bill_doc_ref, {
-        'status': 'Paid'
-    })
-
-    return {"success": True, "message": "Payment processed and inventory updated."}
-
-
-def process_payment(bid):
-    """
-    Public function to initiate the payment transaction.
-    """
-    try:
-        bill_doc_ref = billing_ref.document(bid)
-        transaction = db.transaction()
-        result = _process_payment_transaction(transaction, bill_doc_ref)
-        return result
-    except Exception as e:
-        print(f"Transaction failed for bill {bid}: {e}")
-        # Return a dictionary with the error message
-        return {"success": False, "error": str(e)}
+    """Deletes an inventory item."""
+    doc_ref = db.collection(f"{BASE_COLLECTION}/inventory").document(iid)
+    doc_ref.delete()
 
