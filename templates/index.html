@@ -7,25 +7,26 @@
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Load Alpine.js -->
-    <!-- 'defer' is crucial. It waits for the page to load before running Alpine. -->
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
     <script>
         function medicalApp() {
             return {
-                // --- Core App State ---
                 loading: true,
-                currentTab: 'dashboard', // Default tab is now dashboard
+                currentTab: 'dashboard', // Default tab
                 tabs: [
-                    // Added Dashboard
-                    { id: 'dashboard', name: 'Dashboard', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />' },
-                    { id: 'patients', name: 'Patients', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />' },
-                    { id: 'doctors', name: 'Doctors', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />' },
-                    { id: 'appointments', name: 'Appointments', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />' },
-                    { id: 'billing', name: 'Billing', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />' },
-                    { id: 'inventory', name: 'Inventory', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />' }
+                    { id: 'dashboard', name: 'Dashboard', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1V9a1 1 0 011-1h2a1 1 0 011 1v10a1 1 0 001 1m-6 0h6"></path>' },
+                    { id: 'patients', name: 'Patients', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>' },
+                    { id: 'doctors', name: 'Doctors', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9a3 3 0 00-3-3h-1.5a3 3 0 100 6H15a3 3 0 003-3zM9 9a3 3 0 00-3-3H4.5a3 3 0 100 6H6a3 3 0 003-3zM12 15a3 3 0 00-3-3H7.5a3 3 0 100 6H9a3 3 0 003-3z"></path>' },
+                    { id: 'appointments', name: 'Appointments', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>' },
+                    { id: 'billing', name: 'Billing', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>' },
+                    { id: 'inventory', name: 'Inventory', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>' }
                 ],
+
+                // --- Search Text Properties ---
+                searchPatient: '',
+                searchDoctor: '',
+                searchAppointment: '',
+                searchBilling: '',
+                searchInventory: '',
 
                 // --- Data Properties ---
                 patients: [],
@@ -34,14 +35,15 @@
                 billing: [],
                 inventory: [],
 
-                // --- Search Properties ---
-                searchPatient: '',
-                searchDoctor: '',
-                searchAppointment: '',
-                searchBilling: '',
-                searchInventory: '',
+                // --- MODIFIED: Added list of doctor specialties ---
+                doctorSpecialties: [
+                    'General Physician', 'Pediatrician', 'Gynecologist', 'Orthopedic Surgeon',
+                    'Cardiologist', 'Dermatologist', 'ENT Specialist', 'Ophthalmologist',
+                    'Neurologist', 'Psychiatrist', 'Dentist', 'Radiologist', 'Oncologist',
+                    'Urologist', 'Nephrologist', 'Gastroenterologist', 'Endocrinologist',
+                    'Pulmonologist', 'Physiotherapist', 'Emergency Medicine'
+                ],
 
-                // --- Modal & Form State ---
                 modal: {
                     open: false,
                     type: '',
@@ -50,37 +52,49 @@
                 },
                 form: {},
 
-                // For Billing Line Items
-                billItem: { id: '', name: '', quantity: 1, price: 0 },
+                // For "View Items" modal
+                billModal: {
+                    open: false,
+                    patientName: '',
+                    items: [],
+                    total: 0
+                },
 
-                // For Viewing Bill Items
-                viewBillItems: [],
+                // For adding items to a bill in the modal
+                billForm: {
+                    itemId: '',
+                    quantity: 1
+                },
 
-                // --- Schemas for clearing the form ---
+                // Schemas for clearing the form
                 schemas: {
-                    // Updated for DOB
+                    // MODIFIED: dob is now a date string, gender has a default
                     patients: { id: null, name: '', contact: '', history: '', dob: '', gender: 'M' },
-                    doctors: { id: null, name: '', specialty: '', schedule: '' },
-                    // Updated to save patient/doctor IDs
-                    appointments: { id: null, patient: '', doctor: '', datetime: new Date().toISOString().slice(0, 16) },
-                    // Updated for line items
-                    billing: { id: null, patient: '', items: [], total: 0, status: 'Pending' },
-                    // Updated for price
+                    // MODIFIED: default specialty
+                    doctors: { id: null, name: '', specialty: 'General Physician', schedule: '' },
+                    // MODIFIED: default patient/doctor ID to null
+                    appointments: { id: null, patient: null, doctor: null, datetime: new Date().toISOString().slice(0, 16) },
+                    // MODIFIED: patient is an ID, items is an array
+                    billing: { id: null, patient: null, items: [], total: 0, status: 'Pending' },
+                    // MODIFIED: Added price
                     inventory: { id: null, item: '', quantity: 0, supplier: '', price: 0.0 }
                 },
 
-                // --- Computed Properties (for Search) ---
+                // --- Computed Properties for Filtering ---
                 get filteredPatients() {
                     if (!this.searchPatient) return this.patients;
+                    const search = this.searchPatient.toLowerCase();
                     return this.patients.filter(p =>
-                        p.name.toLowerCase().includes(this.searchPatient.toLowerCase())
+                        p.name.toLowerCase().includes(search) ||
+                        p.contact.toLowerCase().includes(search)
                     );
                 },
                 get filteredDoctors() {
                     if (!this.searchDoctor) return this.doctors;
+                    const search = this.searchDoctor.toLowerCase();
                     return this.doctors.filter(d =>
-                        d.name.toLowerCase().includes(this.searchDoctor.toLowerCase()) ||
-                        d.specialty.toLowerCase().includes(this.searchDoctor.toLowerCase())
+                        d.name.toLowerCase().includes(search) ||
+                        d.specialty.toLowerCase().includes(search)
                     );
                 },
                 get filteredAppointments() {
@@ -101,30 +115,34 @@
                 },
                 get filteredInventory() {
                     if (!this.searchInventory) return this.inventory;
+                    const search = this.searchInventory.toLowerCase();
                     return this.inventory.filter(i =>
-                        i.item.toLowerCase().includes(this.searchInventory.toLowerCase())
+                        i.item.toLowerCase().includes(search) ||
+                        i.supplier.toLowerCase().includes(search)
                     );
                 },
 
-                // --- Computed Properties (for Dashboard) ---
-                get todaysAppointments() {
-                    const today = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
-                    return this.appointments.filter(a => a.datetime && a.datetime.startsWith(today));
-                },
+                // --- Computed Properties for Dashboard ---
                 get pendingBillCount() {
                     return this.billing.filter(b => b.status === 'Pending').length;
                 },
                 get lowStockItems() {
-                    return this.inventory.filter(i => i.quantity <= 10);
+                    return this.inventory.filter(i => i.quantity <= 10); // Show items with 10 or less in stock
+                },
+                get todaysAppointments() {
+                    const today = new Date().setHours(0, 0, 0, 0);
+                    return this.appointments.filter(appt => {
+                        const apptDate = new Date(appt.datetime).setHours(0, 0, 0, 0);
+                        return apptDate === today;
+                    }).sort((a,b) => new Date(a.datetime) - new Date(b.datetime)); // Sort by time
                 },
 
-                // --- Initialization ---
+                // Load all data from our Flask API
                 async init() {
                     await this.fetchAllData();
                     this.loading = false;
                 },
 
-                // --- Data Fetching ---
                 async fetchAllData() {
                     try {
                         const cacheBust = `?_=${new Date().getTime()}`;
@@ -142,10 +160,11 @@
                         this.inventory = inventory;
                     } catch (error) {
                         console.error("Error fetching data:", error);
-                        this.showToast("Could not load data from the server.", "error");
+                        alert("Could not load data from the server.");
                     }
                 },
 
+                // Fetch data for a specific type
                 async fetchData(type) {
                     try {
                         const cacheBust = `?_=${new Date().getTime()}`;
@@ -159,29 +178,31 @@
                     }
                 },
 
-                // --- Modal Management ---
+                // --- Modal Functions ---
+
                 openModal(type, item = null) {
                     this.modal.type = type;
-                    // Reset billing line item
-                    this.billItem = { id: '', name: '', quantity: 1, price: 0 };
+                    // Reset bill line item form
+                    this.billForm = { itemId: '', quantity: 1 };
 
                     if (item) {
                         // Edit mode
                         this.modal.isEdit = true;
                         this.modal.title = `Edit ${type.slice(0, -1)}`;
-                        this.form = JSON.parse(JSON.stringify(item)); // Deep clone
+                        // Clone item data to form
+                        this.form = { ...item };
 
-                        // Fix datetimes for inputs
+                        // Special handling for appointment datetime
                         if(type === 'appointments' && this.form.datetime) {
-                            this.form.datetime = this.formatDateTimeForInput(this.form.datetime);
+                            this.form.datetime = this.formatISODate(this.form.datetime);
                         }
                     } else {
                         // Add mode
                         this.modal.isEdit = false;
                         this.modal.title = `Add ${type.slice(0, -1)}`;
+                        // Use schema to reset form
                         this.form = { ...this.schemas[type] };
-
-                        // Special handling for new bill
+                        // Ensure 'items' array is fresh for new bill
                         if (type === 'billing') {
                             this.form.items = [];
                         }
@@ -189,16 +210,22 @@
                     this.modal.open = true;
                 },
 
-                openViewItemsModal(bill) {
-                    this.viewBillItems = bill.items || [];
-                    this.modal.title = `Items for Bill #${bill.id.substring(0, 6)}...`;
-                    this.modal.type = 'viewItems'; // Special modal type
-                    this.modal.open = true;
+                openBillViewModal(bill) {
+                    this.billModal.patientName = this.getPatientName(bill.patient);
+                    this.billModal.items = bill.items || [];
+                    this.billModal.total = bill.total || 0;
+                    this.billModal.open = true;
                 },
 
-                // --- Form Submission ---
+                // Handle form submission (Add or Edit)
                 async submitForm() {
                     const type = this.modal.type;
+
+                    // Recalculate total for billing just before submit
+                    if (type === 'billing') {
+                        this.calculateBillTotal();
+                    }
+
                     const url = this.modal.isEdit ? `/api/${type}/${this.form.id}` : `/api/${type}`;
                     const method = this.modal.isEdit ? 'PUT' : 'POST';
 
@@ -209,24 +236,19 @@
                             body: JSON.stringify(this.form)
                         });
 
-                        if (!response.ok) {
-                            const err = await response.json();
-                            throw new Error(err.error || 'Server responded with an error');
-                        }
+                        if (!response.ok) throw new Error('Server responded with an error');
 
+                        // Refresh data for the current tab and close modal
                         await this.fetchData(type);
-                        if (type === 'billing') await this.fetchData('inventory'); // Refresh inventory if we paid a bill
-
                         this.modal.open = false;
-                        this.showToast(`${type.slice(0, -1)} saved successfully.`, 'success');
 
                     } catch (error) {
                         console.error("Error submitting form:", error);
-                        this.showToast(error.message, 'error');
+                        alert(`Could not save ${this.modal.type}. Please try again.`);
                     }
                 },
 
-                // --- Delete ---
+                // Delete an item
                 async deleteItem(type, id) {
                     if (!confirm(`Are you sure you want to delete this ${type.slice(0, -1)}?`)) return;
 
@@ -237,63 +259,59 @@
                         if (!response.ok) throw new Error('Server responded with an error');
 
                         await this.fetchData(type);
-                        this.showToast(`${type.slice(0, -1)} deleted.`, 'success');
                     } catch (error) {
                         console.error("Error deleting item:", error);
-                        this.showToast(`Could not delete item.`, 'error');
+                        alert(`Could not delete ${this.modal.type}. Please try again.`);
                     }
                 },
 
-                // --- Billing Actions (NEW for Feature #4) ---
-                addBillItem() {
-                    if (!this.billItem.id || this.billItem.quantity <= 0) {
-                        this.showToast("Please select an item and quantity.", "error");
+                // --- Billing-Specific Functions (Feature #4) ---
+
+                addItemToBill() {
+                    if (!this.billForm.itemId || this.billForm.quantity <= 0) {
+                        alert("Please select an item and enter a valid quantity.");
                         return;
                     }
 
-                    // Find selected item from inventory to get details
-                    const itemData = this.inventory.find(i => i.id === this.billItem.id);
-                    if (!itemData) return;
+                    const itemToAdd = this.inventory.find(i => i.id === this.billForm.itemId);
+                    if (!itemToAdd) {
+                        alert("Item not found in inventory.");
+                        return;
+                    }
 
-                    // Check if item is already in the list
-                    const existingItem = this.form.items.find(i => i.id === itemData.id);
+                    // Check if item is already on bill
+                    const existingItem = this.form.items.find(i => i.id === itemToAdd.id);
                     if (existingItem) {
-                        existingItem.quantity = parseInt(existingItem.quantity) + parseInt(this.billItem.quantity);
+                        existingItem.quantity = parseInt(existingItem.quantity) + parseInt(this.billForm.quantity);
                     } else {
                         this.form.items.push({
-                            id: itemData.id,
-                            name: itemData.item,
-                            quantity: parseInt(this.billItem.quantity),
-                            price: parseFloat(itemData.price)
+                            id: itemToAdd.id,
+                            name: itemToAdd.item,
+                            price: itemToAdd.price,
+                            quantity: parseInt(this.billForm.quantity)
                         });
                     }
-                    this.calculateBillTotal();
 
-                    // Reset the item form
-                    this.billItem = { id: '', name: '', quantity: 1, price: 0 };
+                    this.calculateBillTotal();
+                    // Reset bill item form
+                    this.billForm = { itemId: '', quantity: 1 };
                 },
 
-                removeBillItem(itemId) {
+                removeItemFromBill(itemId) {
                     this.form.items = this.form.items.filter(i => i.id !== itemId);
                     this.calculateBillTotal();
                 },
 
                 calculateBillTotal() {
-                    this.form.total = this.form.items.reduce((acc, item) => {
-                        return acc + (item.price * item.quantity);
-                    }, 0);
-                },
-
-                onBillItemSelect() {
-                    const itemData = this.inventory.find(i => i.id === this.billItem.id);
-                    if (itemData) {
-                        this.billItem.name = itemData.item;
-                        this.billItem.price = itemData.price;
-                    }
+                    let total = 0;
+                    this.form.items.forEach(item => {
+                        total += (item.price * item.quantity);
+                    });
+                    this.form.total = total;
                 },
 
                 async markBillAsPaid(billId) {
-                    if (!confirm("Mark this bill as 'Paid'? This will deduct items from inventory.")) return;
+                    if (!confirm("This will mark the bill as 'Paid' and update inventory stock. This action cannot be undone. Proceed?")) return;
 
                     try {
                         const response = await fetch(`/api/billing/pay/${billId}`, {
@@ -301,38 +319,42 @@
                         });
                         const result = await response.json();
 
-                        if (!response.ok || !result.success) {
-                            throw new Error(result.error || "Failed to process payment.");
+                        if (!response.ok) {
+                            throw new Error(result.error || 'Failed to process payment.');
                         }
 
-                        this.showToast("Bill marked as Paid! Inventory updated.", 'success');
-                        // Refresh both billing and inventory
+                        alert("Bill marked as paid and inventory updated!");
+                        // Refresh both billing and inventory data
                         await this.fetchData('billing');
                         await this.fetchData('inventory');
 
                     } catch (error) {
                         console.error("Error processing payment:", error);
-                        this.showToast(error.message, 'error');
+                        alert(`Payment processing failed: ${error.message}`);
                     }
                 },
 
-                // --- Helper Functions ---
+                // --- Helper/Utility Functions ---
+
+                // Calculates age from DOB string (YYYY-MM-DD)
                 calculateAge(dob) {
                     if (!dob) return 'N/A';
-                    const diff = Date.now() - new Date(dob).getTime();
-                    const ageDate = new Date(diff);
-                    return Math.abs(ageDate.getUTCFullYear() - 1970);
-                },
-
-                formatDateTime(isoString) {
-                    if (!isoString) return 'N/A';
                     try {
-                        const date = new Date(isoString);
-                        return date.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
-                    } catch(e) { return isoString; }
+                        const birthDate = new Date(dob);
+                        const today = new Date();
+                        let age = today.getFullYear() - birthDate.getFullYear();
+                        const m = today.getMonth() - birthDate.getMonth();
+                        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                            age--;
+                        }
+                        return age;
+                    } catch(e) {
+                        return 'N/A';
+                    }
                 },
 
-                formatDateTimeForInput(isoString) {
+                // Formats ISO string for 'datetime-local' input
+                formatISODate(isoString) {
                     if (!isoString) return new Date().toISOString().slice(0, 16);
                     try {
                         const dt = new Date(isoString);
@@ -348,42 +370,46 @@
                     }
                 },
 
+                // Formats ISO string for display
+                formatDisplayDateTime(isoString) {
+                    if (!isoString) return 'N/A';
+                    try {
+                        const date = new Date(isoString);
+                        return date.toLocaleString('en-US', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                        });
+                    } catch(e) {
+                        return isoString; // fallback
+                    }
+                },
+
+                // Find Patient/Doctor name from ID
                 getPatientName(id) {
+                    if (!id) return 'Unknown Patient';
                     const patient = this.patients.find(p => p.id === id);
-                    return patient ? patient.name : 'Unknown Patient';
+                    return patient ? patient.name : `Patient ID (${id.slice(0,5)}...)`;
                 },
-
                 getDoctorName(id) {
+                    if (!id) return 'Unknown Doctor';
                     const doctor = this.doctors.find(d => d.id === id);
-                    return doctor ? doctor.name : 'Unknown Doctor';
-                },
-
-                // --- Toast Notification ---
-                toast: {
-                    open: false,
-                    message: '',
-                    type: 'success' // 'success' or 'error'
-                },
-
-                showToast(message, type = 'success') {
-                    this.toast.message = message;
-                    this.toast.type = type;
-                    this.toast.open = true;
-                    setTimeout(() => this.toast.open = false, 3000);
+                    return doctor ? doctor.name : `Doctor ID (${id.slice(0,5)}...)`;
                 }
             }
         }
     </script>
 
+    <!-- Use defer to make sure Alpine.js runs *after* the medicalApp function is defined -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     <style>
-        /* Simple transitions for modal and toast */
-        .modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
-        .modal-enter-from, .modal-leave-to { opacity: 0; }
-
-        .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
-        .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
-        .toast-enter-to, .toast-leave-from { opacity: 1; transform: translateY(0); }
-
+        /* Simple transition for modal */
+        .modal-enter-active, .modal-leave-active {
+            transition: opacity 0.2s ease;
+        }
+        .modal-enter-from, .modal-leave-to {
+            opacity: 0;
+        }
         [x-cloak] { display: none !important; }
     </style>
 </head>
@@ -392,7 +418,7 @@
     <!-- Main Container -->
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <div class="w-64 bg-white shadow-lg flex flex-col flex-shrink-0">
+        <div class="w-64 bg-white shadow-lg flex flex-col">
             <div class="p-6 border-b border-gray-200">
                 <h1 class="text-xl font-bold text-blue-700">Medical System</h1>
             </div>
@@ -401,8 +427,8 @@
                     <button @click="currentTab = tab.id"
                             :class="currentTab === tab.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'"
                             class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-200">
-                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" x-html="tab.icon"></svg>
-                        <span class="truncate" x-text="tab.name"></span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" x-html="tab.icon"></svg>
+                        <span x-text="tab.name"></span>
                     </button>
                 </template>
             </nav>
@@ -422,64 +448,58 @@
                 <div x-show="currentTab === 'dashboard'">
                     <h2 class="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <!-- Summary Cards -->
-                        <div class="bg-white p-6 rounded-lg shadow">
-                            <h3 class="text-lg font-medium text-gray-700">Pending Bills</h3>
-                            <p class="text-4xl font-bold text-blue-600" x-text="pendingBillCount"></p>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow">
-                            <h3 class="text-lg font-medium text-gray-700">Total Patients</h3>
-                            <p class="text-4xl font-bold text-blue-600" x-text="patients.length"></p>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow">
-                            <h3 class="text-lg font-medium text-gray-700">Staff on Duty</h3>
-                            <p class="text-4xl font-bold text-blue-600" x-text="doctors.length"></p>
-                        </div>
 
                         <!-- Today's Appointments -->
-                        <div class="bg-white p-6 rounded-lg shadow md:col-span-2">
-                            <h3 class="text-lg font-medium text-gray-700 mb-4">Today's Appointments</h3>
-                            <div class="space-y-3 max-h-60 overflow-y-auto">
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Today's Appointments</h3>
+                            <div class="space-y-4 max-h-60 overflow-y-auto">
                                 <template x-if="todaysAppointments.length === 0">
-                                    <p class="text-gray-500">No appointments scheduled for today.</p>
+                                    <p class="text-sm text-gray-500">No appointments scheduled for today.</p>
                                 </template>
                                 <template x-for="appt in todaysAppointments" :key="appt.id">
-                                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-                                        <div>
-                                            <p class="font-medium text-gray-800" x-text="getPatientName(appt.patient)"></p>
-                                            <p class="text-sm text-gray-500">with <span x-text="getDoctorName(appt.doctor)"></span></p>
-                                        </div>
-                                        <div class="text-sm text-gray-700" x-text="formatDateTime(appt.datetime).split(', ')[1]"></div>
+                                    <div class="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <p class="font-semibold text-blue-800" x-text="getPatientName(appt.patient)"></p>
+                                        <p class="text-sm text-blue-600" x-text="getDoctorName(appt.doctor)"></p>
+                                        <p class="text-sm text-gray-700" x-text="formatDisplayDateTime(appt.datetime)"></p>
                                     </div>
                                 </template>
+                            </div>
+                        </div>
+
+                        <!-- Pending Bills -->
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Pending Bills</h3>
+                            <div class="flex items-center justify-center">
+                                <p class="text-6xl font-bold text-yellow-500" x-text="pendingBillCount"></p>
                             </div>
                         </div>
 
                         <!-- Low Stock Items -->
-                        <div class="bg-white p-6 rounded-lg shadow">
-                            <h3 class="text-lg font-medium text-gray-700 mb-4">Low Stock</h3>
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Low Stock Items (<= 10)</h3>
                             <div class="space-y-3 max-h-60 overflow-y-auto">
                                 <template x-if="lowStockItems.length === 0">
-                                    <p class="text-gray-500">Inventory is well-stocked.</p>
+                                    <p class="text-sm text-gray-500">Inventory is well-stocked.</p>
                                 </template>
                                 <template x-for="item in lowStockItems" :key="item.id">
-                                    <div class="flex justify-between items-center p-3 bg-red-50 rounded">
-                                        <p class="font-medium text-red-800" x-text="item.item"></p>
-                                        <p class="text-sm text-red-600 font-bold" x-text="`Only ${item.quantity} left`"></p>
+                                    <div class="flex justify-between items-center p-2 bg-red-50 rounded border border-red-200">
+                                        <span class="text-sm font-medium text-red-800" x-text="item.item"></span>
+                                        <span class="text-sm font-bold text-red-600" x-text="item.quantity"></span>
                                     </div>
                                 </template>
                             </div>
                         </div>
+
                     </div>
                 </div>
 
                 <!-- Patients Tab -->
                 <div x-show="currentTab === 'patients'">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Patient Management</h2>
-                    <div class="flex justify-between mb-4">
-                        <input type="text" x-model="searchPatient" placeholder="Search by name..." class="px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <button @click="openModal('patients')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Patient</button>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-800">Patient Management</h2>
+                        <input type="text" x-model="searchPatient" placeholder="Search patients..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
+                    <button @click="openModal('patients')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Patient</button>
                     <div class="bg-white shadow rounded-lg overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -493,9 +513,11 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
+                                <!-- MODIFIED: Loop over filteredPatients -->
                                 <template x-for="patient in filteredPatients" :key="patient.id">
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="patient.name"></td>
+                                        <!-- MODIFIED: Calculate age from DOB -->
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="calculateAge(patient.dob)"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="patient.gender"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="patient.contact"></td>
@@ -513,11 +535,11 @@
 
                 <!-- Doctors Tab -->
                 <div x-show="currentTab === 'doctors'">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Doctor Management</h2>
-                    <div class="flex justify-between mb-4">
-                        <input type="text" x-model="searchDoctor" placeholder="Search by name or specialty..." class="px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <button @click="openModal('doctors')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Doctor</button>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-800">Doctor Management</h2>
+                        <input type="text" x-model="searchDoctor" placeholder="Search doctors..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
+                    <button @click="openModal('doctors')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Doctor</button>
                     <div class="bg-white shadow rounded-lg overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -529,6 +551,7 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
+                                <!-- MODIFIED: Loop over filteredDoctors -->
                                 <template x-for="doctor in filteredDoctors" :key="doctor.id">
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="doctor.name"></td>
@@ -547,11 +570,11 @@
 
                 <!-- Appointments Tab -->
                 <div x-show="currentTab === 'appointments'">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Appointment Management</h2>
-                    <div class="flex justify-between mb-4">
-                        <input type="text" x-model="searchAppointment" placeholder="Search by patient or doctor..." class="px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <button @click="openModal('appointments')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Schedule Appointment</button>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-800">Appointment Management</h2>
+                        <input type="text" x-model="searchAppointment" placeholder="Search by patient or doctor..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
+                    <button @click="openModal('appointments')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Schedule Appointment</button>
                     <div class="bg-white shadow rounded-lg overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -563,11 +586,13 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
+                                <!-- MODIFIED: Loop over filteredAppointments -->
                                 <template x-for="appt in filteredAppointments" :key="appt.id">
                                     <tr>
+                                        <!-- MODIFIED: Use helper to get name from ID -->
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="getPatientName(appt.patient)"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="getDoctorName(appt.doctor)"></td>
-                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="formatDateTime(appt.datetime)"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="formatDisplayDateTime(appt.datetime)"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                             <button @click="openModal('appointments', appt)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
                                             <button @click="deleteItem('appointments', appt.id)" class="text-red-600 hover:text-red-900">Delete</button>
@@ -581,11 +606,11 @@
 
                 <!-- Billing Tab -->
                 <div x-show="currentTab === 'billing'">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Billing Management</h2>
-                    <div class="flex justify-between mb-4">
-                        <input type="text" x-model="searchBilling" placeholder="Search by patient or status..." class="px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <button @click="openModal('billing')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Bill</button>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-800">Billing Management</h2>
+                        <input type="text" x-model="searchBilling" placeholder="Search by patient or status..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
+                    <button @click="openModal('billing')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Bill</button>
                     <div class="bg-white shadow rounded-lg overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -597,20 +622,22 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
+                                <!-- MODIFIED: Loop over filteredBilling -->
                                 <template x-for="bill in filteredBilling" :key="bill.id">
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="getPatientName(bill.patient)"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="`$${bill.total.toFixed(2)}`"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="bill.total ? `$${bill.total.toFixed(2)}` : '$0.00'"></td>
                                         <td class="px-6 py-4 text-sm text-gray-500">
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
                                                   :class="{ 'bg-green-100 text-green-800': bill.status === 'Paid', 'bg-yellow-100 text-yellow-800': bill.status === 'Pending', 'bg-red-100 text-red-800': bill.status === 'Overdue' }"
                                                   x-text="bill.status"></span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                            <button @click="openViewItemsModal(bill)" class="text-gray-600 hover:text-gray-900">View</button>
-                                            <button @click="openModal('billing', bill)" class="text-indigo-600 hover:text-indigo-900" x-show="bill.status !== 'Paid'">Edit</button>
-                                            <button @click="markBillAsPaid(bill.id)" class="text-green-600 hover:text-green-900" x-show="bill.status === 'Pending'">Mark as Paid</button>
-                                            <button @click="deleteItem('billing', bill.id)" class="text-red-600 hover:text-red-900" x-show="bill.status !== 'Paid'">Delete</button>
+                                            <!-- MODIFIED: Added 'View Items' and 'Mark as Paid' buttons -->
+                                            <button @click="openBillViewModal(bill)" class="text-blue-600 hover:text-blue-900">View Items</button>
+                                            <button x-show="bill.status !== 'Paid'" @click="markBillAsPaid(bill.id)" class="text-green-600 hover:text-green-900">Mark as Paid</button>
+                                            <button @click="openModal('billing', bill)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                            <button @click="deleteItem('billing', bill.id)" class="text-red-600 hover:text-red-900">Delete</button>
                                         </td>
                                     </tr>
                                 </template>
@@ -621,28 +648,30 @@
 
                 <!-- Inventory Tab -->
                 <div x-show="currentTab === 'inventory'">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Inventory Management</h2>
-                    <div class="flex justify-between mb-4">
-                        <input type="text" x-model="searchInventory" placeholder="Search by item name..." class="px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <button @click="openModal('inventory')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Item</button>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-800">Inventory Management</h2>
+                        <input type="text" x-model="searchInventory" placeholder="Search inventory..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
+                    <button @click="openModal('inventory')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Item</button>
                     <div class="bg-white shadow rounded-lg overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price (per unit)</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
+                                <!-- MODIFIED: Loop over filteredInventory -->
                                 <template x-for="item in filteredInventory" :key="item.id">
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="item.item"></td>
+                                        <!-- MODIFIED: Added Price column -->
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="item.price ? `$${item.price.toFixed(2)}` : '$0.00'"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="item.quantity"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="`$${item.price.toFixed(2)}`"></td>
                                         <td class="px-6 py-4 text-sm text-gray-500" x-text="item.supplier"></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                             <button @click="openModal('inventory', item)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
@@ -658,17 +687,21 @@
         </main>
     </div>
 
-    <!-- Universal Modal -->
+    <!-- Main Add/Edit Modal -->
     <div x-show="modal.open"
-         class="fixed inset-0 z-50 overflow-y-auto"
+         class="fixed inset-0 z-10 overflow-y-auto"
          x-transition:enter="modal-enter-active"
          x-transition:leave="modal-leave-active"
          x-cloak>
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <!-- Background overlay -->
             <div x-show="modal.open"
-                 x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                 x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
                  class="fixed inset-0 transition-opacity"
                  @click="modal.open = false">
                 <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
@@ -677,15 +710,18 @@
             <!-- Modal panel -->
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen"></span>&#8203;
             <div x-show="modal.open"
-                 x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                 x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
 
-                <form @submit.prevent="modal.type === 'viewItems' ? modal.open = false : submitForm()">
+                <form @submit.prevent="submitForm()">
                     <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                         <h3 class="text-lg leading-6 font-medium text-gray-900" x-text="modal.title"></h3>
-                        <div class="mt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-
+                        <div class="mt-4 space-y-4">
                             <!-- Patient Fields -->
                             <template x-if="modal.type === 'patients'">
                                 <div class="space-y-4">
@@ -693,10 +729,12 @@
                                         <label class="block text-sm font-medium text-gray-700">Name</label>
                                         <input type="text" x-model="form.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
+                                    <!-- MODIFIED: Changed Age to DOB (Date of Birth) -->
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Date of Birth</label>
                                         <input type="date" x-model="form.dob" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
+                                    <!-- MODIFIED: Added Gender dropdown -->
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Gender</label>
                                         <select x-model="form.gender" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
@@ -723,13 +761,18 @@
                                         <label class="block text-sm font-medium text-gray-700">Name</label>
                                         <input type="text" x-model="form.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
+                                    <!-- MODIFIED: Changed Specialty to a dropdown -->
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Specialty</label>
-                                        <input type="text" x-model="form.specialty" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        <select x-model="form.specialty" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                            <template x-for="spec in doctorSpecialties" :key="spec">
+                                                <option :value="spec" x-text="spec"></option>
+                                            </template>
+                                        </select>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Schedule</label>
-                                        <input type="text" x-model="form.schedule" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        <input type="text" x-model="form.schedule" placeholder="e.g., Mon-Fri 9am-5pm" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                                     </div>
                                 </div>
                             </template>
@@ -737,6 +780,7 @@
                             <!-- Appointment Fields -->
                             <template x-if="modal.type === 'appointments'">
                                 <div class="space-y-4">
+                                    <!-- MODIFIED: Dropdown for Patient -->
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Patient</label>
                                         <select x-model="form.patient" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
@@ -746,6 +790,7 @@
                                             </template>
                                         </select>
                                     </div>
+                                    <!-- MODIFIED: Dropdown for Doctor -->
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Doctor</label>
                                         <select x-model="form.doctor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
@@ -762,12 +807,12 @@
                                 </div>
                             </template>
 
-                            <!-- Billing Fields (NEW) -->
+                            <!-- Billing Fields (Overhauled for Feature #4) -->
                             <template x-if="modal.type === 'billing'">
                                 <div class="space-y-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Patient</label>
-                                        <select x-model="form.patient" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required :disabled="form.status === 'Paid'">
+                                        <select x-model="form.patient" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                             <option value="" disabled>Select a patient</option>
                                             <template x-for="p in patients" :key="p.id">
                                                 <option :value="p.id" x-text="p.name"></option>
@@ -776,53 +821,46 @@
                                     </div>
 
                                     <!-- Add Bill Items -->
-                                    <div x-show="form.status !== 'Paid'">
-                                        <label class="block text-sm font-medium text-gray-700">Add Items</label>
-                                        <div class="mt-1 flex space-x-2">
-                                            <select x-model="billItem.id" @change="onBillItemSelect()" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    <div class="border-t border-gray-200 pt-4">
+                                        <label class="block text-sm font-medium text-gray-700">Add Items to Bill</label>
+                                        <div class="flex space-x-2 mt-1">
+                                            <select x-model="billForm.itemId" class="block w-2/3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                                                 <option value="" disabled>Select an item...</option>
                                                 <template x-for="i in inventory" :key="i.id">
-                                                    <option :value="i.id" x-text="`${i.item} ($${i.price.toFixed(2)}) - Stock: ${i.quantity}`"></option>
+                                                    <option :value="i.id" x-text="`${i.item} - $${i.price.toFixed(2)} (Stock: ${i.quantity})`"></option>
                                                 </template>
                                             </select>
-                                            <input type="number" min="1" x-model.number="billItem.quantity" class="block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                            <button type="button" @click="addBillItem()" class="bg-blue-500 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-600">Add</button>
+                                            <input type="number" x-model.number="billForm.quantity" min="1" class="block w-1/4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                            <button type="button" @click="addItemToBill" class="w-auto px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Add</button>
                                         </div>
                                     </div>
 
-                                    <!-- Added Items List -->
-                                    <div class="space-y-2">
-                                        <label class="block text-sm font-medium text-gray-700">Bill Items</label>
-                                        <template x-if="form.items.length === 0">
-                                            <p class="text-sm text-gray-500">No items added to this bill.</p>
-                                        </template>
+                                    <!-- Bill Items List -->
+                                    <div class="space-y-2 max-h-40 overflow-y-auto" x-show="form.items.length > 0">
                                         <template x-for="item in form.items" :key="item.id">
-                                            <div class="flex justify-between items-center bg-gray-50 p-2 rounded">
+                                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
                                                 <div>
-                                                    <p class="font-medium text-sm" x-text="`${item.name} (x${item.quantity})`"></p>
-                                                    <p class="text-xs text-gray-500" x-text="`$${item.price.toFixed(2)} each = $${(item.price * item.quantity).toFixed(2)}`"></p>
+                                                    <p class="text-sm font-medium text-gray-900" x-text="item.name"></p>
+                                                    <p class="text-sm text-gray-500" x-text="`${item.quantity} x $${item.price.toFixed(2)} = $${(item.quantity * item.price).toFixed(2)}`"></p>
                                                 </div>
-                                                <button type="button" @click="removeBillItem(item.id)" class="text-red-500 hover:text-red-700" x-show="form.status !== 'Paid'">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                </button>
+                                                <button type="button" @click="removeItemFromBill(item.id)" class="text-red-500 hover:text-red-700">&times;</button>
                                             </div>
                                         </template>
                                     </div>
 
-                                    <!-- Bill Total -->
-                                    <div class="text-right">
-                                        <label class="text-sm font-medium text-gray-700">Total:</label>
-                                        <span class="text-xl font-bold text-gray-900" x-text="`$${form.total.toFixed(2)}`"></span>
+                                    <!-- Bill Total and Status -->
+                                    <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+                                        <h4 class="text-lg font-bold">Total: $<span x-text="form.total.toFixed(2)"></span></h4>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Status</label>
+                                            <select x-model="form.status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                                <option>Pending</option>
+                                                <option>Paid</option>
+                                                <option>Overdue</option>
+                                            </select>
+                                        </div>
                                     </div>
 
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Status</label>
-                                        <select x-model="form.status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" :disabled="form.status === 'Paid'">
-                                            <option>Pending</option>
-                                            <option>Paid</option>
-                                            <option>Overdue</option>
-                                        </select>
-                                    </div>
                                 </div>
                             </template>
 
@@ -833,13 +871,14 @@
                                         <label class="block text-sm font-medium text-gray-700">Item Name</label>
                                         <input type="text" x-model="form.item" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
+                                    <!-- MODIFIED: Added Price -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700">Quantity</label>
-                                        <input type="number" min="0" x-model.number="form.quantity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                        <label class="block text-sm font-medium text-gray-700">Price ($)</label>
+                                        <input type="number" step="0.01" x-model.number="form.price" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700">Price (per unit)</label>
-                                        <input type="number" min="0" step="0.01" x-model.number="form.price" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                        <label class="block text-sm font-medium text-gray-700">Quantity</label>
+                                        <input type="number" x-model.number="form.quantity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Supplier</label>
@@ -848,37 +887,16 @@
                                 </div>
                             </template>
 
-                            <!-- View Bill Items (Read-only) -->
-                            <template x-if="modal.type === 'viewItems'">
-                                <div class="space-y-2">
-                                    <template x-if="viewBillItems.length === 0">
-                                        <p class="text-sm text-gray-500">This bill has no items.</p>
-                                    </template>
-                                    <template x-for="item in viewBillItems" :key="item.id">
-                                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded">
-                                            <div>
-                                                <p class="font-medium text-sm" x-text="`${item.name} (x${item.quantity})`"></p>
-                                                <p class="text-xs text-gray-500" x-text="`$${item.price.toFixed(2)} each = $${(item.price * item.quantity).toFixed(2)}`"></p>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-                            </template>
-
                         </div>
                     </div>
                     <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                        <template x-if="modal.type !== 'viewItems'">
-                            <button type="submit"
-                                    :disabled="form.status === 'Paid'"
-                                    :class="{ 'opacity-50 cursor-not-allowed': form.status === 'Paid' }"
-                                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-                                    x-text="modal.isEdit ? 'Update' : 'Save'"></button>
-                        </template>
+                        <button type="submit"
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                x-text="modal.isEdit ? 'Update' : 'Save'"></button>
                         <button type="button"
                                 @click="modal.open = false"
-                                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                                x-text="modal.type === 'viewItems' ? 'Close' : 'Cancel'">
+                                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
                         </button>
                     </div>
                 </form>
@@ -886,15 +904,67 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div x-show="toast.open"
-         x-transition:enter="toast-enter-active"
-         x-transition:leave="toast-leave-active"
-         class="fixed top-5 right-5 z-50"
+    <!-- View Bill Items Modal (Feature #4) -->
+    <div x-show="billModal.open"
+         class="fixed inset-0 z-20 overflow-y-auto"
+         x-transition:enter="modal-enter-active"
+         x-transition:leave="modal-leave-active"
          x-cloak>
-        <div class="px-4 py-3 rounded-md shadow-lg"
-             :class="toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'">
-            <span x-text="toast.message"></span>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Background overlay -->
+            <div x-show="billModal.open"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 transition-opacity"
+                 @click="billModal.open = false">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <!-- Modal panel -->
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen"></span>&#8203;
+            <div x-show="billModal.open"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Bill Details</h3>
+                    <p class="text-sm text-gray-500 mb-4">Patient: <span class="font-medium" x-text="billModal.patientName"></span></p>
+
+                    <div class="space-y-2 max-h-60 overflow-y-auto border-t border-b border-gray-200 py-4">
+                        <template x-if="billModal.items.length === 0">
+                            <p class="text-sm text-gray-500">No items on this bill.</p>
+                        </template>
+                        <template x-for="item in billModal.items" :key="item.id">
+                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900" x-text="item.name"></p>
+                                    <p class="text-sm text-gray-500" x-text="`${item.quantity} x $${item.price.toFixed(2)} = $${(item.quantity * item.price).toFixed(2)}`"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="flex justify-end items-center pt-4">
+                        <h4 class="text-lg font-bold">Total: $<span x-text="billModal.total.toFixed(2)"></span></h4>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button"
+                            @click="billModal.open = false"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Close
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

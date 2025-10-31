@@ -4,12 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="99746341-1197-4098-9cb5-bf3faa278cc8" name="Changes" comment="Dropdowns in Appointments tab">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/firebase_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/firebase_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/web_app.py" afterDir="false" />
-    </list>
+    <list default="true" id="99746341-1197-4098-9cb5-bf3faa278cc8" name="Changes" comment="Inventory and Billing" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -121,7 +116,15 @@
       <option name="project" value="LOCAL" />
       <updated>1761853826238</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Inventory and Billing">
+      <option name="closed" value="true" />
+      <created>1761910851649</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1761910851649</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -131,6 +134,7 @@
     <MESSAGE value="Search Feature" />
     <MESSAGE value="Dashboard" />
     <MESSAGE value="Dropdowns in Appointments tab" />
-    <option name="LAST_COMMIT_MESSAGE" value="Dropdowns in Appointments tab" />
+    <MESSAGE value="Inventory and Billing" />
+    <option name="LAST_COMMIT_MESSAGE" value="Inventory and Billing" />
   </component>
 </project>
