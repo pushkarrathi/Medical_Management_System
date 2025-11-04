@@ -6,10 +6,52 @@
     <title>Medical Management System</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e40af', // Deep blue
+                        secondary: '#10b981', // Emerald green
+                        accent: '#f59e0b', // Amber
+                        danger: '#ef4444', // Red
+                        success: '#22c55e', // Green
+                        warning: '#f97316', // Orange
+                        info: '#3b82f6', // Blue
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'bounce-in': 'bounceIn 0.6s ease-out',
+                        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        bounceIn: {
+                            '0%': { transform: 'scale(0.3)', opacity: '0' },
+                            '50%': { transform: 'scale(1.05)' },
+                            '70%': { transform: 'scale(0.9)' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                    },
+                }
+            }
+        }
+    </script>
 
     <!-- Load Alpine.js -->
     <!-- 'defer' ensures our medicalApp() function is defined before Alpine tries to run -->
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <script>
         function medicalApp() {
@@ -18,12 +60,12 @@
                 currentTab: 'dashboard', // Default tab is now dashboard
                 tabs: [
                     // --- NEW: Dashboard Tab ---
-                    { id: 'dashboard', name: 'Dashboard', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>' },
-                    { id: 'patients', name: 'Patients', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>' },
-                    { id: 'doctors', name: 'Doctors', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9a3 3 0 00-3-3h-1.5a3 3 0 100 6H15a3 3 0 003-3zM9 9a3 3 0 00-3-3H4.5a3 3 0 100 6H6a3 3 0 003-3zM12 15a3 3 0 00-3-3H7.5a3 3 0 100 6H9a3 3 0 003-3z"></path>' },
-                    { id: 'appointments', name: 'Appointments', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>' },
-                    { id: 'billing', name: 'Billing', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>' },
-                    { id: 'inventory', name: 'Inventory', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>' }
+                    { id: 'dashboard', name: 'Dashboard', iconClass: 'fas fa-tachometer-alt' },
+                    { id: 'patients', name: 'Patients', iconClass: 'fas fa-users' },
+                    { id: 'doctors', name: 'Doctors', iconClass: 'fas fa-user-md' },
+                    { id: 'appointments', name: 'Appointments', iconClass: 'fas fa-calendar-check' },
+                    { id: 'billing', name: 'Billing', iconClass: 'fas fa-file-invoice-dollar' },
+                    { id: 'inventory', name: 'Inventory', iconClass: 'fas fa-boxes' }
                 ],
 
                 // --- Data Properties ---
@@ -191,6 +233,22 @@
                 },
                 get lowStockItems() {
                     return this.inventory.filter(item => item.quantity <= 10);
+                },
+                get totalPatients() {
+                    return this.patients.length;
+                },
+                get totalDoctors() {
+                    return this.doctors.length;
+                },
+                get totalAppointments() {
+                    return this.appointments.length;
+                },
+                get totalRevenue() {
+                    return this.billing.filter(bill => bill.status === 'Paid').reduce((sum, bill) => sum + bill.total, 0);
+                },
+                get recentActivity() {
+                    // Get last 5 appointments
+                    return this.appointments.slice(-5).reverse();
                 },
 
 
@@ -449,6 +507,36 @@
                     if (!id) return 'All';
                     const doctor = this.doctors.find(d => d.id === id);
                     return doctor ? doctor.specialty : 'All';
+                },
+
+                // --- NEW: Handle drag and drop for Kanban board ---
+                async handleDrop(event, newStatus) {
+                    const draggedBill = event.dataTransfer.getData('text/plain');
+                    if (!draggedBill) return;
+
+                    const billId = JSON.parse(draggedBill).id;
+                    const bill = this.billing.find(b => b.id === billId);
+                    if (!bill || bill.status === newStatus) return;
+
+                    // Update bill status
+                    bill.status = newStatus;
+
+                    try {
+                        const response = await fetch(`/api/billing/${billId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(bill)
+                        });
+
+                        if (!response.ok) throw new Error('Server responded with an error');
+
+                        await this.fetchData('billing');
+                    } catch (error) {
+                        console.error("Error updating bill status:", error);
+                        alert(`Could not update bill status: ${error.message}`);
+                        // Revert the change
+                        bill.status = bill.status === 'Pending' ? 'Paid' : bill.status === 'Paid' ? 'Overdue' : 'Pending';
+                    }
                 }
             }
         }
@@ -468,22 +556,30 @@
 <body class="bg-gray-100 font-sans antialiased" x-data="medicalApp()">
 
     <!-- Main Container -->
-    <div class="flex h-screen">
+    <div class="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <!-- Sidebar -->
-        <div class="w-64 bg-white shadow-lg flex flex-col">
-            <div class="p-6 border-b border-gray-200">
-                <h1 class="text-xl font-bold text-blue-700">Medical System</h1>
+        <div class="w-64 bg-gradient-to-b from-primary to-blue-800 shadow-2xl flex flex-col animate-slide-up">
+            <div class="p-6 border-b border-blue-600">
+                <h1 class="text-2xl font-bold text-white flex items-center space-x-2">
+                    <i class="fas fa-hospital text-accent"></i>
+                    <span>MediCare</span>
+                </h1>
             </div>
             <nav class="flex-1 p-4 space-y-2">
                 <template x-for="tab in tabs" :key="tab.id">
                     <button @click="currentTab = tab.id"
-                            :class="currentTab === tab.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'"
-                            class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-200">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" x-html="tab.icon"></svg>
-                        <span x-text="tab.name"></span>
+                            :class="currentTab === tab.id ? 'bg-accent text-primary shadow-lg transform scale-105' : 'text-white hover:bg-blue-700 hover:transform hover:scale-105'"
+                            class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ease-in-out hover:shadow-md">
+                        <i :class="tab.iconClass" class="w-5 h-5"></i>
+                        <span x-text="tab.name" class="font-medium"></span>
                     </button>
                 </template>
             </nav>
+            <div class="p-4 border-t border-blue-600">
+                <div class="text-center text-white text-sm opacity-75">
+                    <i class="fas fa-user-md"></i> Professional Healthcare Management
+                </div>
+            </div>
         </div>
 
         <!-- Content Area -->
@@ -498,18 +594,64 @@
 
                 <!-- === DASHBOARD TAB === -->
                 <div x-show="currentTab === 'dashboard'">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h2>
+                    <!-- Welcome Header -->
+                    <div class="bg-gradient-to-r from-primary to-blue-600 text-white p-8 rounded-xl shadow-lg mb-8 animate-bounce-in">
+                        <h1 class="text-3xl font-bold mb-2">Welcome to MediCare Dashboard</h1>
+                        <p class="text-blue-100">Manage your medical practice efficiently with real-time insights and data.</p>
+                    </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Total Patients -->
+                        <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all duration-300 animate-bounce-in" style="animation-delay: 0.1s;">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full">
+                                    <i class="fas fa-users text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Total Patients</p>
+                                    <p class="text-3xl font-bold text-gray-800 animate-pulse-slow" x-text="totalPatients"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Doctors -->
+                        <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all duration-300 animate-bounce-in" style="animation-delay: 0.2s;">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-green-100 text-green-600 rounded-full">
+                                    <i class="fas fa-user-md text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Total Doctors</p>
+                                    <p class="text-3xl font-bold text-gray-800 animate-pulse-slow" x-text="totalDoctors"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Appointments -->
+                        <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all duration-300 animate-bounce-in" style="animation-delay: 0.3s;">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-purple-100 text-purple-600 rounded-full">
+                                    <i class="fas fa-calendar-check text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Total Appointments</p>
+                                    <p class="text-3xl font-bold text-gray-800 animate-pulse-slow" x-text="totalAppointments"></p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Today's Appointments -->
-                        <div class="bg-white shadow rounded-lg p-6">
-                            <h3 class="text-lg font-medium text-gray-700 mb-4">Today's Appointments</h3>
+                        <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all duration-300 animate-bounce-in" style="animation-delay: 0.4s;">
+                            <h3 class="text-lg font-medium text-gray-700 mb-4 flex items-center space-x-2">
+                                <i class="fas fa-calendar-day text-blue-500"></i>
+                                <span>Today's Appointments</span>
+                            </h3>
                             <div class="space-y-3 max-h-60 overflow-y-auto">
                                 <template x-if="todaysAppointments.length === 0">
                                     <p class="text-sm text-gray-500">No appointments scheduled for today.</p>
                                 </template>
                                 <template x-for="appt in todaysAppointments" :key="appt.id">
-                                    <div class="p-3 bg-blue-50 rounded-lg">
+                                    <div class="p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors duration-200">
                                         <p class="text-sm font-semibold text-blue-800" x-text="getPatientName(appt.patient)"></p>
                                         <p class="text-sm text-blue-600" x-text="`with ${getDoctorName(appt.doctor)}`"></p>
                                         <p class="text-sm text-gray-600" x-text="formatDateTime(appt.datetime)"></p>
@@ -518,29 +660,31 @@
                             </div>
                         </div>
 
-                        <!-- Billing Overview -->
-                        <div class="bg-white shadow rounded-lg p-6">
-                            <h3 class="text-lg font-medium text-gray-700 mb-4">Billing Overview</h3>
+                        <!-- Revenue Overview -->
+                        <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all duration-300 animate-bounce-in" style="animation-delay: 0.5s;">
                             <div class="flex items-center space-x-4">
-                                <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-yellow-100 text-yellow-600 rounded-full">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-green-100 text-green-600 rounded-full">
+                                    <i class="fas fa-rupee-sign text-xl"></i>
                                 </div>
                                 <div>
-                                    <p class="text-sm text-gray-500">Pending Bills</p>
-                                    <p class="text-2xl font-bold text-gray-800" x-text="pendingBillCount"></p>
+                                    <p class="text-sm text-gray-500">Total Revenue</p>
+                                    <p class="text-3xl font-bold text-gray-800 animate-pulse-slow" x-text="`₹${totalRevenue.toFixed(2)}`"></p>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Low Stock Items -->
-                        <div class="bg-white shadow rounded-lg p-6">
-                            <h3 class="text-lg font-medium text-gray-700 mb-4">Low Stock Warning</h3>
+                        <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all duration-300 animate-bounce-in" style="animation-delay: 0.6s;">
+                            <h3 class="text-lg font-medium text-gray-700 mb-4 flex items-center space-x-2">
+                                <i class="fas fa-exclamation-triangle text-red-500"></i>
+                                <span>Low Stock Warning</span>
+                            </h3>
                             <div class="space-y-3 max-h-60 overflow-y-auto">
                                 <template x-if="lowStockItems.length === 0">
                                     <p class="text-sm text-gray-500">Inventory levels look good.</p>
                                 </template>
                                 <template x-for="item in lowStockItems" :key="item.id">
-                                    <div class="p-3 bg-red-50 rounded-lg flex justify-between items-center">
+                                    <div class="p-3 bg-red-50 rounded-lg flex justify-between items-center hover:bg-red-100 transition-colors duration-200">
                                         <p class="text-sm font-semibold text-red-800" x-text="item.item"></p>
                                         <p class="text-sm text-red-600 font-bold" x-text="`Stock: ${item.quantity}`"></p>
                                     </div>
@@ -548,206 +692,346 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Recent Activity -->
+                    <div class="mt-8 bg-white shadow-lg rounded-xl p-6 animate-bounce-in" style="animation-delay: 0.7s;">
+                        <h3 class="text-lg font-medium text-gray-700 mb-4 flex items-center space-x-2">
+                            <i class="fas fa-history text-gray-500"></i>
+                            <span>Recent Activity</span>
+                        </h3>
+                        <div class="space-y-3 max-h-60 overflow-y-auto">
+                            <template x-if="recentActivity.length === 0">
+                                <p class="text-sm text-gray-500">No recent appointments.</p>
+                            </template>
+                            <template x-for="appt in recentActivity" :key="appt.id">
+                                <div class="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                                    <p class="text-sm font-semibold text-gray-800" x-text="getPatientName(appt.patient)"></p>
+                                    <p class="text-sm text-gray-600" x-text="`Appointment with ${getDoctorName(appt.doctor)}`"></p>
+                                    <p class="text-sm text-gray-500" x-text="formatDateTime(appt.datetime)"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- === PATIENTS TAB === -->
                 <div x-show="currentTab === 'patients'">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-semibold text-gray-800">Patient Management</h2>
+                        <h2 class="text-2xl font-semibold text-gray-800 flex items-center space-x-2">
+                            <i class="fas fa-users text-blue-500"></i>
+                            <span>Patient Management</span>
+                        </h2>
                         <!-- NEW: Search Bar -->
                         <input type="text" x-model="searchPatient" placeholder="Search by name, contact, or gender..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
-                    <button @click="openModal('patients')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Patient</button>
-                    <div class="bg-white shadow rounded-lg overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                    <!-- MODIFIED: Added Age and Gender -->
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">History</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                <!-- MODIFIED: Use filteredPatients -->
-                                <template x-for="patient in filteredPatients" :key="patient.id">
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="patient.name"></td>
-                                        <!-- MODIFIED: Show calculated Age -->
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="calculateAge(patient.dob)"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="patient.gender"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="patient.contact"></td>
-                                        <td class="px-6 py-4 text-sm text-gray-500 truncate max-w-sm" x-text="patient.history"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                            <button @click="openModal('patients', patient)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
-                                            <button @click="deleteItem('patients', patient.id)" class="text-red-600 hover:text-red-900">Delete</button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
+                    <button @click="openModal('patients')" class="mb-6 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300 hover:shadow-xl">
+                        <i class="fas fa-plus mr-2"></i>Add Patient
+                    </button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="(patient, index) in filteredPatients" :key="patient.id">
+                            <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all duration-300 animate-bounce-in hover:transform hover:scale-105" :style="`animation-delay: ${index * 0.1}s;`">
+                                <div class="flex items-center space-x-4 mb-4">
+                                    <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full">
+                                        <i class="fas fa-user text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-800" x-text="patient.name"></h3>
+                                        <p class="text-sm text-gray-500" x-text="`Age: ${calculateAge(patient.dob)} | ${patient.gender}`"></p>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <p class="text-sm text-gray-600"><i class="fas fa-phone mr-2 text-green-500"></i><span x-text="patient.contact || 'N/A'"></span></p>
+                                    <p class="text-sm text-gray-600"><i class="fas fa-notes-medical mr-2 text-purple-500"></i><span x-text="patient.history || 'No history'"></span></p>
+                                </div>
+                                <div class="flex justify-end space-x-2 mt-4">
+                                    <button @click="openModal('patients', patient)" class="px-3 py-1 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition-colors duration-200">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </button>
+                                    <button @click="deleteItem('patients', patient.id)" class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors duration-200">
+                                        <i class="fas fa-trash mr-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
 
                 <!-- === DOCTORS TAB === -->
                 <div x-show="currentTab === 'doctors'">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-semibold text-gray-800">Doctor Management</h2>
+                        <h2 class="text-2xl font-semibold text-gray-800 flex items-center space-x-2">
+                            <i class="fas fa-user-md text-blue-500"></i>
+                            <span>Doctor Management</span>
+                        </h2>
                         <!-- NEW: Search Bar -->
                         <input type="text" x-model="searchDoctor" placeholder="Search by name or specialty..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
-                    <button @click="openModal('doctors')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Doctor</button>
-                    <div class="bg-white shadow rounded-lg overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Specialty</th>
-                                    <!-- MODIFIED: Added Fee -->
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consultation Fee</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                <!-- MODIFIED: Use filteredDoctors -->
-                                <template x-for="doctor in filteredDoctors" :key="doctor.id">
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="doctor.name"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="doctor.specialty"></td>
-                                        <!-- MODIFIED: Show Fee -->
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="doctor.fee ? `₹${doctor.fee.toFixed(2)}` : '₹0.00'"></td>
-                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="doctor.schedule"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                            <button @click="openModal('doctors', doctor)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
-                                            <button @click="deleteItem('doctors', doctor.id)" class="text-red-600 hover:text-red-900">Delete</button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
+                    <button @click="openModal('doctors')" class="mb-6 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300 hover:shadow-xl">
+                        <i class="fas fa-plus mr-2"></i>Add Doctor
+                    </button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="(doctor, index) in filteredDoctors" :key="doctor.id">
+                            <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all duration-300 animate-bounce-in hover:transform hover:scale-105" :style="`animation-delay: ${index * 0.1}s;`">
+                                <div class="flex items-center space-x-4 mb-4">
+                                    <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-green-100 text-green-600 rounded-full">
+                                        <i class="fas fa-user-md text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-800" x-text="doctor.name"></h3>
+                                        <p class="text-sm text-gray-500" x-text="doctor.specialty"></p>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <p class="text-sm text-gray-600"><i class="fas fa-rupee-sign mr-2 text-green-500"></i><span x-text="doctor.fee ? `₹${doctor.fee.toFixed(2)}` : '₹0.00'"></span></p>
+                                    <p class="text-sm text-gray-600"><i class="fas fa-calendar-alt mr-2 text-blue-500"></i><span x-text="doctor.schedule || 'No schedule'"></span></p>
+                                </div>
+                                <div class="flex justify-end space-x-2 mt-4">
+                                    <button @click="openModal('doctors', doctor)" class="px-3 py-1 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition-colors duration-200">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </button>
+                                    <button @click="deleteItem('doctors', doctor.id)" class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors duration-200">
+                                        <i class="fas fa-trash mr-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
 
                 <!-- === APPOINTMENTS TAB === -->
                 <div x-show="currentTab === 'appointments'">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-semibold text-gray-800">Appointment Management</h2>
+                        <h2 class="text-2xl font-semibold text-gray-800 flex items-center space-x-2">
+                            <i class="fas fa-calendar-check text-blue-500"></i>
+                            <span>Appointment Management</span>
+                        </h2>
                         <!-- NEW: Search Bar -->
                         <input type="text" x-model="searchAppointment" placeholder="Search by patient or doctor..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
-                    <button @click="openModal('appointments')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Schedule Appointment</button>
-                    <div class="bg-white shadow rounded-lg overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                <!-- MODIFIED: Use filteredAppointments and helper functions -->
-                                <template x-for="appt in filteredAppointments" :key="appt.id">
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="getPatientName(appt.patient)"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="getDoctorName(appt.doctor)"></td>
-                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="formatDateTime(appt.datetime)"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                            <button @click="openModal('appointments', appt)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
-                                            <button @click="deleteItem('appointments', appt.id)" class="text-red-600 hover:text-red-900">Delete</button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
+                    <button @click="openModal('appointments')" class="mb-6 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300 hover:shadow-xl">
+                        <i class="fas fa-plus mr-2"></i>Schedule Appointment
+                    </button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="(appt, index) in filteredAppointments" :key="appt.id">
+                            <div class="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all duration-300 animate-bounce-in hover:transform hover:scale-105" :style="`animation-delay: ${index * 0.1}s;`">
+                                <div class="flex items-center space-x-4 mb-4">
+                                    <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-purple-100 text-purple-600 rounded-full">
+                                        <i class="fas fa-calendar-check text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-800" x-text="getPatientName(appt.patient)"></h3>
+                                        <p class="text-sm text-gray-500" x-text="`with ${getDoctorName(appt.doctor)}`"></p>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <p class="text-sm text-gray-600"><i class="fas fa-clock mr-2 text-blue-500"></i><span x-text="formatDateTime(appt.datetime)"></span></p>
+                                </div>
+                                <div class="flex justify-end space-x-2 mt-4">
+                                    <button @click="openModal('appointments', appt)" class="px-3 py-1 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition-colors duration-200">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </button>
+                                    <button @click="deleteItem('appointments', appt.id)" class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors duration-200">
+                                        <i class="fas fa-trash mr-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
 
                 <!-- === BILLING TAB === -->
                 <div x-show="currentTab === 'billing'">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-semibold text-gray-800">Billing Management</h2>
+                        <h2 class="text-2xl font-semibold text-gray-800 flex items-center space-x-2">
+                            <i class="fas fa-file-invoice-dollar text-blue-500"></i>
+                            <span>Billing Management</span>
+                        </h2>
                         <!-- NEW: Search Bar -->
                         <input type="text" x-model="searchBilling" placeholder="Search by patient or status..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
-                    <button @click="openModal('billing')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Bill</button>
-                    <div class="bg-white shadow rounded-lg overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
-                                    <!-- MODIFIED: Changed Amount to Total -->
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                <!-- MODIFIED: Use filteredBilling and show Total -->
-                                <template x-for="bill in filteredBilling" :key="bill.id">
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="getPatientName(bill.patient)"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="bill.total ? `₹${bill.total.toFixed(2)}` : '₹0.00'"></td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                                                  :class="{ 'bg-green-100 text-green-800': bill.status === 'Paid', 'bg-yellow-100 text-yellow-800': bill.status === 'Pending', 'bg-red-100 text-red-800': bill.status === 'Overdue' }"
-                                                  x-text="bill.status"></span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                            <!-- NEW: "Mark as Paid" and "View Items" buttons -->
-                                            <button @click="showBillItems(bill)" class="text-blue-600 hover:text-blue-900">View Items</button>
-                                            <button x-show="bill.status !== 'Paid'" @click="markAsPaid(bill.id)" class="text-green-600 hover:text-green-900">Mark as Paid</button>
-                                            <button @click="openModal('billing', bill)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
-                                            <button @click="deleteItem('billing', bill.id)" class="text-red-600 hover:text-red-900">Delete</button>
-                                        </td>
-                                    </tr>
+                    <button @click="openModal('billing')" class="mb-6 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300 hover:shadow-xl">
+                        <i class="fas fa-plus mr-2"></i>Add Bill
+                    </button>
+                    <!-- Kanban Board Layout -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Pending Column -->
+                        <div class="bg-gray-50 p-4 rounded-lg shadow-md">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center space-x-2">
+                                <i class="fas fa-clock text-yellow-500"></i>
+                                <span>Pending</span>
+                                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full" x-text="filteredBilling.filter(b => b.status === 'Pending').length"></span>
+                            </h3>
+                            <div class="space-y-3 min-h-64" @drop="handleDrop($event, 'Pending')" @dragover.prevent>
+                                <template x-for="bill in filteredBilling.filter(b => b.status === 'Pending')" :key="bill.id">
+                                    <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-yellow-400 cursor-move hover:shadow-md transition-shadow duration-200"
+                                         draggable="true"
+                                         @dragstart="event.dataTransfer.setData('text/plain', JSON.stringify(bill))">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <h4 class="font-semibold text-gray-800" x-text="getPatientName(bill.patient)"></h4>
+                                            <span class="text-lg font-bold text-green-600" x-text="`₹${bill.total.toFixed(2)}`"></span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <button @click="showBillItems(bill)" class="text-blue-500 hover:text-blue-700 text-sm">
+                                                <i class="fas fa-eye mr-1"></i>View Items
+                                            </button>
+                                            <div class="space-x-1">
+                                                <button @click="markAsPaid(bill.id)" class="text-green-500 hover:text-green-700 text-sm">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button @click="openModal('billing', bill)" class="text-indigo-500 hover:text-indigo-700 text-sm">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button @click="deleteItem('billing', bill.id)" class="text-red-500 hover:text-red-700 text-sm">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </template>
-                            </tbody>
-                        </table>
+                            </div>
+                        </div>
+
+                        <!-- Paid Column -->
+                        <div class="bg-gray-50 p-4 rounded-lg shadow-md">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center space-x-2">
+                                <i class="fas fa-check-circle text-green-500"></i>
+                                <span>Paid</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full" x-text="filteredBilling.filter(b => b.status === 'Paid').length"></span>
+                            </h3>
+                            <div class="space-y-3 min-h-64" @drop="handleDrop($event, 'Paid')" @dragover.prevent>
+                                <template x-for="bill in filteredBilling.filter(b => b.status === 'Paid')" :key="bill.id">
+                                    <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-400 cursor-move hover:shadow-md transition-shadow duration-200"
+                                         draggable="true"
+                                         @dragstart="event.dataTransfer.setData('text/plain', JSON.stringify(bill))">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <h4 class="font-semibold text-gray-800" x-text="getPatientName(bill.patient)"></h4>
+                                            <span class="text-lg font-bold text-green-600" x-text="`₹${bill.total.toFixed(2)}`"></span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <button @click="showBillItems(bill)" class="text-blue-500 hover:text-blue-700 text-sm">
+                                                <i class="fas fa-eye mr-1"></i>View Items
+                                            </button>
+                                            <div class="space-x-1">
+                                                <button @click="openModal('billing', bill)" class="text-indigo-500 hover:text-indigo-700 text-sm">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button @click="deleteItem('billing', bill.id)" class="text-red-500 hover:text-red-700 text-sm">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Overdue Column -->
+                        <div class="bg-gray-50 p-4 rounded-lg shadow-md">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center space-x-2">
+                                <i class="fas fa-exclamation-triangle text-red-500"></i>
+                                <span>Overdue</span>
+                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full" x-text="filteredBilling.filter(b => b.status === 'Overdue').length"></span>
+                            </h3>
+                            <div class="space-y-3 min-h-64" @drop="handleDrop($event, 'Overdue')" @dragover.prevent>
+                                <template x-for="bill in filteredBilling.filter(b => b.status === 'Overdue')" :key="bill.id">
+                                    <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-red-400 cursor-move hover:shadow-md transition-shadow duration-200"
+                                         draggable="true"
+                                         @dragstart="event.dataTransfer.setData('text/plain', JSON.stringify(bill))">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <h4 class="font-semibold text-gray-800" x-text="getPatientName(bill.patient)"></h4>
+                                            <span class="text-lg font-bold text-green-600" x-text="`₹${bill.total.toFixed(2)}`"></span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <button @click="showBillItems(bill)" class="text-blue-500 hover:text-blue-700 text-sm">
+                                                <i class="fas fa-eye mr-1"></i>View Items
+                                            </button>
+                                            <div class="space-x-1">
+                                                <button @click="markAsPaid(bill.id)" class="text-green-500 hover:text-green-700 text-sm">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button @click="openModal('billing', bill)" class="text-indigo-500 hover:text-indigo-700 text-sm">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button @click="deleteItem('billing', bill.id)" class="text-red-500 hover:text-red-700 text-sm">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- === INVENTORY TAB === -->
                 <div x-show="currentTab === 'inventory'">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-semibold text-gray-800">Inventory Management</h2>
+                        <h2 class="text-2xl font-semibold text-gray-800 flex items-center space-x-2">
+                            <i class="fas fa-boxes text-blue-500"></i>
+                            <span>Inventory Management</span>
+                        </h2>
                         <!-- NEW: Search Bar -->
                         <input type="text" x-model="searchInventory" placeholder="Search by item or supplier..." class="w-1/3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
-                    <button @click="openModal('inventory')" class="mb-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all">Add Item</button>
-                    <div class="bg-white shadow rounded-lg overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                                    <!-- MODIFIED: Added Price column -->
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                <!-- MODIFIED: Use filteredInventory and show Price -->
-                                <template x-for="item in filteredInventory" :key="item.id">
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="item.item"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="item.price ? `₹${item.price.toFixed(2)}` : '₹0.00'"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="item.quantity"></td>
-                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="item.supplier"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                            <button @click="openModal('inventory', item)" class="text-indigo-600 hover:text-indigo-900">Edit</button>
-                                            <button @click="deleteItem('inventory', item.id)" class="text-red-600 hover:text-red-900">Delete</button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
+                    <button @click="openModal('inventory')" class="mb-6 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300 hover:shadow-xl">
+                        <i class="fas fa-plus mr-2"></i>Add Item
+                    </button>
+                    <!-- Timeline Container -->
+                    <div class="relative">
+                        <!-- Vertical Line -->
+                        <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-300"></div>
+                        <!-- Timeline Items -->
+                        <div class="space-y-6">
+                            <template x-for="(item, index) in filteredInventory" :key="item.id">
+                                <div class="relative flex items-start space-x-4 animate-bounce-in" :style="`animation-delay: ${index * 0.1}s;`">
+                                    <!-- Timeline Dot -->
+                                    <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
+                                         :class="item.quantity <= 10 ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'">
+                                        <i class="fas fa-box text-sm"></i>
+                                    </div>
+                                    <!-- Timeline Card -->
+                                    <div class="flex-1 bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition-all duration-300 hover:transform hover:scale-105"
+                                         :class="item.quantity <= 10 ? 'border-l-4 border-red-500' : 'border-l-4 border-blue-500'">
+                                        <div class="flex justify-between items-start mb-4">
+                                            <div>
+                                                <h3 class="text-lg font-semibold text-gray-800" x-text="item.item"></h3>
+                                                <p class="text-sm text-gray-500" x-text="item.supplier || 'No supplier'"></p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-lg font-bold text-green-600" x-text="item.price ? `₹${item.price.toFixed(2)}` : '₹0.00'"></p>
+                                                <p class="text-sm text-gray-500">Price</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <div class="flex items-center space-x-2">
+                                                <i class="fas fa-cubes text-blue-500"></i>
+                                                <span class="text-sm font-medium" :class="item.quantity <= 10 ? 'text-red-600' : 'text-gray-700'" x-text="`Quantity: ${item.quantity}`"></span>
+                                                <template x-if="item.quantity <= 10">
+                                                    <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Low Stock</span>
+                                                </template>
+                                            </div>
+                                            <div class="space-x-2">
+                                                <button @click="openModal('inventory', item)" class="px-3 py-1 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition-colors duration-200">
+                                                    <i class="fas fa-edit mr-1"></i>Edit
+                                                </button>
+                                                <button @click="deleteItem('inventory', item.id)" class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors duration-200">
+                                                    <i class="fas fa-trash mr-1"></i>Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <!-- No Items Message -->
+                        <template x-if="filteredInventory.length === 0">
+                            <div class="text-center py-12">
+                                <i class="fas fa-box-open text-6xl text-gray-300 mb-4"></i>
+                                <p class="text-gray-500 text-lg">No inventory items found.</p>
+                                <p class="text-gray-400">Try adjusting your search or add a new item.</p>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -962,7 +1246,7 @@
                                         <input type="number" step="0.01" min="0" x-model.number="form.price" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700">Quantity</Vlabel>
+                                        <label class="block text-sm font-medium text-gray-700">Quantity</label>
                                         <input type="number" step="1" min="0" x-model.number="form.quantity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                     </div>
                                     <div>

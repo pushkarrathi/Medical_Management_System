@@ -2,6 +2,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import json
 import os
+import mysql_service
 
 # --- Firebase Initialization ---
 db = None
@@ -72,7 +73,9 @@ def add_patient(name, contact, history, dob, gender):
         'dob': dob,
         'gender': gender
     })
-    return doc_ref.id
+    pid = doc_ref.id
+    mysql_service.add_patient_mysql(pid, name, contact, history, dob, gender)
+    return pid
 
 
 def update_patient(pid, name, contact, history, dob, gender):
@@ -85,11 +88,13 @@ def update_patient(pid, name, contact, history, dob, gender):
         'dob': dob,
         'gender': gender
     })
+    mysql_service.update_patient_mysql(pid, name, contact, history, dob, gender)
 
 
 def delete_patient(pid):
     patients_ref = get_collection('patients')
     patients_ref.document(pid).delete()
+    mysql_service.delete_patient_mysql(pid)
 
 
 def get_patient(pid):
@@ -127,7 +132,9 @@ def add_doctor(name, specialty, schedule, fee):
         'schedule': schedule,
         'fee': fee
     })
-    return doc_ref.id
+    did = doc_ref.id
+    mysql_service.add_doctor_mysql(did, name, specialty, schedule, fee)
+    return did
 
 
 def update_doctor(did, name, specialty, schedule, fee):
@@ -139,11 +146,13 @@ def update_doctor(did, name, specialty, schedule, fee):
         'schedule': schedule,
         'fee': fee
     })
+    mysql_service.update_doctor_mysql(did, name, specialty, schedule, fee)
 
 
 def delete_doctor(did):
     doctors_ref = get_collection('doctors')
     doctors_ref.document(did).delete()
+    mysql_service.delete_doctor_mysql(did)
 
 
 def get_doctor(did):
@@ -180,7 +189,9 @@ def add_appointment(patient_id, doctor_id, datetime):
         'doctor': doctor_id,  # Storing the ID
         'datetime': datetime
     })
-    return doc_ref.id
+    aid = doc_ref.id
+    mysql_service.add_appointment_mysql(aid, patient_id, doctor_id, datetime)
+    return aid
 
 
 def update_appointment(aid, patient_id, doctor_id, datetime):
@@ -191,11 +202,13 @@ def update_appointment(aid, patient_id, doctor_id, datetime):
         'doctor': doctor_id,
         'datetime': datetime
     })
+    mysql_service.update_appointment_mysql(aid, patient_id, doctor_id, datetime)
 
 
 def delete_appointment(aid):
     appts_ref = get_collection('appointments')
     appts_ref.document(aid).delete()
+    mysql_service.delete_appointment_mysql(aid)
 
 
 def get_appointment(aid):
@@ -233,7 +246,9 @@ def add_bill(patient_id, items, total, status):
         'total': total,
         'status': status
     })
-    return doc_ref.id
+    bid = doc_ref.id
+    mysql_service.add_bill_mysql(bid, patient_id, items, total, status)
+    return bid
 
 
 def update_bill(bid, patient_id, items, total, status):
@@ -245,11 +260,13 @@ def update_bill(bid, patient_id, items, total, status):
         'total': total,
         'status': status
     })
+    mysql_service.update_bill_mysql(bid, patient_id, items, total, status)
 
 
 def delete_bill(bid):
     billing_ref = get_collection('billing')
     billing_ref.document(bid).delete()
+    mysql_service.delete_bill_mysql(bid)
 
 
 def get_bill(bid):
@@ -287,7 +304,9 @@ def add_inventory(item, quantity, supplier, price):
         'supplier': supplier,
         'price': price
     })
-    return doc_ref.id
+    iid = doc_ref.id
+    mysql_service.add_inventory_mysql(iid, item, quantity, supplier, price)
+    return iid
 
 
 def update_inventory(iid, item, quantity, supplier, price):
@@ -299,11 +318,13 @@ def update_inventory(iid, item, quantity, supplier, price):
         'supplier': supplier,
         'price': price
     })
+    mysql_service.update_inventory_mysql(iid, item, quantity, supplier, price)
 
 
 def delete_inventory(iid):
     inventory_ref = get_collection('inventory')
     inventory_ref.document(iid).delete()
+    mysql_service.delete_inventory_mysql(iid)
 
 
 def get_inventory_item(iid):
