@@ -1,68 +1,56 @@
 import firebase_admin
-from firebase_admin import credentials, firestore, auth
-import os
+from firebase_admin import credentials, firestore
 import json
+import os
 
 # --- Firebase Initialization ---
-
-# Define the app_id. We hardcode 'default-app-id' to ensure local and deployed
-# apps use the SAME database path, solving the "default" vs "default-app-id" issue.
-APP_ID = "default-app-id"
-
-# Construct the full, required database path
-BASE_DB_PATH = f"artifacts/{APP_ID}/public/data"
-
 db = None
-try:
-    # 1. Check for the service account key file
-    if os.path.exists("serviceAccountKey.json"):
-        cred = credentials.Certificate("serviceAccountKey.json")
-    else:
-        # 2. If not found, try to load from environment variable (for deployment)
-        firebase_config_str = os.environ.get("__FIREBASE_CONFIG__")
-        if firebase_config_str:
-            # We need json to parse the string
-            import json
+app_id = "default-app-id"  # Hardcoded to unify local and deployed DB
 
+try:
+    # 1. Try to initialize using the serviceAccountKey.json
+    cred_path = os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json')
+    if os.path.exists(cred_path):
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+    else:
+        # 2. Fallback for environments where __app_id is defined (like the platform)
+        # We must load credentials from the environment string
+        firebase_config_str = os.environ.get('__firebase_config')
+        if firebase_config_str:
             firebase_config = json.loads(firebase_config_str)
             cred = credentials.Certificate(firebase_config)
+            app_name = f"app-{app_id}"
+
+            # Check if app is already initialized
+            try:
+                app = firebase_admin.get_app(name=app_name)
+            except ValueError:
+                app = firebase_admin.initialize_app(cred, name=app_name)
+
+            db = firestore.client(app=app)
         else:
-            raise FileNotFoundError("Could not find serviceAccountKey.json or __FIREBASE_CONFIG__ env var.")
-
-    # Initialize the app if it's not already initialized
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app(cred)
-
-    db = firestore.client()
-
-    # 3. Check for auth token (for deployed environment)
-    auth_token = os.environ.get("__INITIAL_AUTH_TOKEN__")
-    if auth_token:
-        try:
-            # Verify the token to ensure our service has auth
-            auth.verify_id_token(auth_token)
-        except Exception as e:
-            print(f"Auth token verification failed (this is ok on local): {e}")
-            # This is okay if running locally, but good to know
-
-    print("Firebase initialized successfully.")
+            raise FileNotFoundError("serviceAccountKey.json not found and __firebase_config is not set.")
 
 except Exception as e:
-    print(f"CRITICAL FIREBASE ERROR: {e}")
-    print("Firebase did not initialize. The app will not be able to connect to the database.")
-    db = None  # Ensure db is None if initialization fails
+    print(f"Error initializing Firebase: {e}")
+    # Handle the case where db is not initialized, e.g., set db to None
+    # and functions below will handle the 'db is None' case.
+    if db is None:
+        print("CRITICAL: Firestore database (db) is None. App will not function.")
 
 
-# --- Helper Function to get a collection reference ---
-def get_collection(collection_name):
-    """Helper to get a collection from the correct sandboxed path."""
-    if not db:
-        raise ConnectionError("Firestore database is not initialized.")
-    return db.collection(f"{BASE_DB_PATH}/{collection_name}")
+def get_collection(name):
+    """Helper to get a collection from the sandboxed path."""
+    if db is None:
+        raise ConnectionError("Firestore is not initialized. Check your serviceAccountKey.json or credentials.")
+    return db.collection('artifacts', app_id, 'public', 'data', name)
 
 
 # --- Patients ---
 def get_patients():
+    """Fetches all patient documents."""
     patients_ref = get_collection('patients')
     docs = patients_ref.stream()
     patients = []
@@ -74,6 +62,7 @@ def get_patients():
 
 
 def add_patient(name, contact, history, dob, gender):
+    """Adds a new patient."""
     patients_ref = get_collection('patients')
     doc_ref = patients_ref.document()
     doc_ref.set({
@@ -87,9 +76,9 @@ def add_patient(name, contact, history, dob, gender):
 
 
 def update_patient(pid, name, contact, history, dob, gender):
+    """Updates an existing patient."""
     patients_ref = get_collection('patients')
-    doc_ref = patients_ref.document(pid)
-    doc_ref.update({
+    patients_ref.document(pid).update({
         'name': name,
         'contact': contact,
         'history': history,
@@ -103,8 +92,21 @@ def delete_patient(pid):
     patients_ref.document(pid).delete()
 
 
+def get_patient(pid):
+    """Fetches a single patient by their ID."""
+    doc_ref = get_collection('patients').document(pid)
+    doc = doc_ref.get()
+    if doc.exists:
+        patient = doc.to_dict()
+        patient['id'] = doc.id
+        return patient
+    else:
+        raise Exception("Patient not found")
+
+
 # --- Doctors ---
 def get_doctors():
+    """Fetches all doctor documents."""
     doctors_ref = get_collection('doctors')
     docs = doctors_ref.stream()
     doctors = []
@@ -116,6 +118,7 @@ def get_doctors():
 
 
 def add_doctor(name, specialty, schedule, fee):
+    """Adds a new doctor."""
     doctors_ref = get_collection('doctors')
     doc_ref = doctors_ref.document()
     doc_ref.set({
@@ -128,9 +131,9 @@ def add_doctor(name, specialty, schedule, fee):
 
 
 def update_doctor(did, name, specialty, schedule, fee):
+    """Updates an existing doctor."""
     doctors_ref = get_collection('doctors')
-    doc_ref = doctors_ref.document(did)
-    doc_ref.update({
+    doctors_ref.document(did).update({
         'name': name,
         'specialty': specialty,
         'schedule': schedule,
@@ -143,8 +146,21 @@ def delete_doctor(did):
     doctors_ref.document(did).delete()
 
 
+def get_doctor(did):
+    """Fetches a single doctor by their ID."""
+    doc_ref = get_collection('doctors').document(did)
+    doc = doc_ref.get()
+    if doc.exists:
+        doctor = doc.to_dict()
+        doctor['id'] = doc.id
+        return doctor
+    else:
+        raise Exception("Doctor not found")
+
+
 # --- Appointments ---
 def get_appointments():
+    """Fetches all appointment documents."""
     appts_ref = get_collection('appointments')
     docs = appts_ref.stream()
     appointments = []
@@ -156,20 +172,21 @@ def get_appointments():
 
 
 def add_appointment(patient_id, doctor_id, datetime):
+    """Adds a new appointment."""
     appts_ref = get_collection('appointments')
     doc_ref = appts_ref.document()
     doc_ref.set({
-        'patient': patient_id,  # Storing ID, not name
-        'doctor': doctor_id,  # Storing ID, not name
+        'patient': patient_id,  # Storing the ID
+        'doctor': doctor_id,  # Storing the ID
         'datetime': datetime
     })
     return doc_ref.id
 
 
 def update_appointment(aid, patient_id, doctor_id, datetime):
+    """Updates an existing appointment."""
     appts_ref = get_collection('appointments')
-    doc_ref = appts_ref.document(aid)
-    doc_ref.update({
+    appts_ref.document(aid).update({
         'patient': patient_id,
         'doctor': doctor_id,
         'datetime': datetime
@@ -181,8 +198,21 @@ def delete_appointment(aid):
     appts_ref.document(aid).delete()
 
 
+def get_appointment(aid):
+    """Fetches a single appointment by its ID."""
+    doc_ref = get_collection('appointments').document(aid)
+    doc = doc_ref.get()
+    if doc.exists:
+        appt = doc.to_dict()
+        appt['id'] = doc.id
+        return appt
+    else:
+        raise Exception("Appointment not found")
+
+
 # --- Billing ---
 def get_billing():
+    """Fetches all bill documents."""
     billing_ref = get_collection('billing')
     docs = billing_ref.stream()
     bills = []
@@ -194,10 +224,11 @@ def get_billing():
 
 
 def add_bill(patient_id, items, total, status):
+    """Adds a new bill."""
     billing_ref = get_collection('billing')
     doc_ref = billing_ref.document()
     doc_ref.set({
-        'patient': patient_id,
+        'patient': patient_id,  # Storing the ID
         'items': items,
         'total': total,
         'status': status
@@ -206,9 +237,9 @@ def add_bill(patient_id, items, total, status):
 
 
 def update_bill(bid, patient_id, items, total, status):
+    """Updates an existing bill."""
     billing_ref = get_collection('billing')
-    doc_ref = billing_ref.document(bid)
-    doc_ref.update({
+    billing_ref.document(bid).update({
         'patient': patient_id,
         'items': items,
         'total': total,
@@ -221,8 +252,21 @@ def delete_bill(bid):
     billing_ref.document(bid).delete()
 
 
+def get_bill(bid):
+    """Fetches a single bill by its ID."""
+    doc_ref = get_collection('billing').document(bid)
+    doc = doc_ref.get()
+    if doc.exists:
+        bill = doc.to_dict()
+        bill['id'] = doc.id
+        return bill
+    else:
+        raise Exception("Bill not found")
+
+
 # --- Inventory ---
 def get_inventory():
+    """Fetches all inventory documents."""
     inventory_ref = get_collection('inventory')
     docs = inventory_ref.stream()
     items = []
@@ -234,6 +278,7 @@ def get_inventory():
 
 
 def add_inventory(item, quantity, supplier, price):
+    """Adds a new inventory item."""
     inventory_ref = get_collection('inventory')
     doc_ref = inventory_ref.document()
     doc_ref.set({
@@ -246,9 +291,9 @@ def add_inventory(item, quantity, supplier, price):
 
 
 def update_inventory(iid, item, quantity, supplier, price):
+    """Updates an existing inventory item."""
     inventory_ref = get_collection('inventory')
-    doc_ref = inventory_ref.document(iid)
-    doc_ref.update({
+    inventory_ref.document(iid).update({
         'item': item,
         'quantity': quantity,
         'supplier': supplier,
@@ -261,78 +306,108 @@ def delete_inventory(iid):
     inventory_ref.document(iid).delete()
 
 
+def get_inventory_item(iid):
+    """Fetches a single inventory item by its ID."""
+    doc_ref = get_collection('inventory').document(iid)
+    doc = doc_ref.get()
+    if doc.exists:
+        item = doc.to_dict()
+        item['id'] = doc.id
+        return item
+    else:
+        raise Exception("Inventory item not found")
+
+
 # --- Transactional Logic ---
 
 @firestore.transactional
-def process_payment_transaction(transaction, bill_ref, bill_doc):
+def process_payment_transaction(transaction, bid):
     """
-    This is the core transactional logic.
-    Firestore transactions require all reads before writes.
+    Handles the payment in a transaction:
+    1. Reads all required docs (bill, inventory items).
+    2. Checks stock.
+    3. Writes all updates (bill status, inventory quantities).
     """
+    billing_ref = get_collection('billing')
+    inventory_ref = get_collection('inventory')
+    bill_doc_ref = billing_ref.document(bid)
 
     # --- 1. READ PHASE ---
-    inventory_ref = get_collection('inventory')
-    inventory_to_update = {}  # Stores refs and new stock levels
 
-    for item in bill_doc.get('items'):
-        item_id = item.get('id')
+    # Get the bill
+    bill_snapshot = bill_doc_ref.get(transaction=transaction)
+    if not bill_snapshot.exists:
+        raise Exception("Bill not found.")
 
-        # 'consult_fee' is not a real inventory item, so skip it
-        if item_id == 'consult_fee':
-            continue
+    bill_data = bill_snapshot.to_dict()
 
-        item_ref = inventory_ref.document(item_id)
+    # Check if bill is already paid
+    if bill_data.get('status') == 'Paid':
+        raise Exception("This bill has already been paid.")
 
-        try:
-            # Read the item from the database
-            item_doc = item_ref.get(transaction=transaction)
-        except Exception as e:
-            raise Exception(f"Failed to read item '{item.get('name')}' from inventory. Error: {e}")
+    items_to_update = bill_data.get('items', [])
+    inventory_snapshots = {}
 
-        if not item_doc.exists:
-            raise Exception(f"Inventory item '{item.get('name')}' (ID: {item_id}) not found.")
+    # Get all inventory items that are part of this bill
+    for item in items_to_update:
+        # We only care about items that are *not* consultations
+        if item.get('isConsultation', False) == False:
+            item_id = item.get('id')
+            if not item_id:
+                raise Exception(f"Bill contains an item with no ID: {item.get('name')}")
 
-        current_quantity = item_doc.to_dict().get('quantity', 0)
-        new_quantity = current_quantity - item.get('quantity', 0)
+            item_doc_ref = inventory_ref.document(item_id)
+            item_snapshot = item_doc_ref.get(transaction=transaction)
 
-        if new_quantity < 0:
-            raise Exception(f"Not enough stock for '{item.get('name')}'. Only {current_quantity} left.")
+            if not item_snapshot.exists:
+                raise Exception(f"Inventory item not found: {item.get('name')}")
 
-        # Store the reference and new quantity for the write phase
-        inventory_to_update[item_ref] = new_quantity
+            inventory_snapshots[item_id] = item_snapshot
 
-    # --- 2. WRITE PHASE ---
+    # --- 2. VALIDATION/CALCULATION PHASE (No DB calls) ---
 
-    # A. Update the bill status
-    transaction.update(bill_ref, {
+    for item in items_to_update:
+        if item.get('isConsultation', False) == False:
+            item_id = item.get('id')
+            item_snapshot = inventory_snapshots[item_id]
+
+            current_quantity = item_snapshot.to_dict().get('quantity', 0)
+            requested_quantity = item.get('quantity', 0)
+
+            if current_quantity < requested_quantity:
+                raise Exception(
+                    f"Not enough stock for item: {item.get('name')}. Requested: {requested_quantity}, Available: {current_quantity}")
+
+    # --- 3. WRITE PHASE ---
+
+    # All checks passed, update the bill
+    transaction.update(bill_doc_ref, {
         'status': 'Paid'
     })
 
-    # B. Update all inventory items
-    for item_ref, new_quantity in inventory_to_update.items():
-        transaction.update(item_ref, {
-            'quantity': new_quantity
-        })
+    # Update all inventory items
+    for item in items_to_update:
+        if item.get('isConsultation', False) == False:
+            item_id = item.get('id')
+            item_snapshot = inventory_snapshots[item_id]
+            item_doc_ref = inventory_ref.document(item_id)  # Get ref again for writing
+
+            current_quantity = item_snapshot.to_dict().get('quantity', 0)
+            requested_quantity = item.get('quantity', 0)
+            new_quantity = current_quantity - requested_quantity
+
+            transaction.update(item_doc_ref, {
+                'quantity': new_quantity
+            })
 
 
 def process_payment(bid):
     """
-    Orchestrates the payment process using the transactional function.
+    Public-facing function to run the payment transaction.
     """
-    if not db:
-        raise ConnectionError("Firestore database is not initialized.")
-
-    billing_ref = get_collection('billing')
-    bill_ref = billing_ref.document(bid)
-
-    # Get the bill document first, outside the transaction
-    bill_doc = bill_ref.get()
-    if not bill_doc.exists:
-        raise Exception("Bill not found.")
-
-    if bill_doc.to_dict().get('status') == 'Paid':
-        raise Exception("This bill has already been paid.")
+    if db is None:
+        raise ConnectionError("Firestore is not initialized.")
 
     transaction = db.transaction()
-    process_payment_transaction(transaction, bill_ref, bill_doc)
+    process_payment_transaction(transaction, bid)
 
